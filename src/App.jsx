@@ -1,83 +1,146 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { PANTRY, STAPLES, GLAZE, RICE } from './data/recipes.js'
 import { missingIngredients } from './lib/pantry.js'
 import { filterDishes } from './lib/filters.js'
+import { searchDishes } from './lib/search.js'
+import { dietTags, matchesDiet } from './lib/diet.js'
+import { missingImpact, shoppingList } from './lib/insights.js'
 import { scaleIngredients, formatAmount } from './lib/scaling.js'
-import { createTimer, start, pause, reset, tick, formatTime } from './lib/timer.js'
+import { createTimer, start, pause, reset, remaining, settle, formatTime } from './lib/timer.js'
 import { loadOwned, saveOwned } from './lib/storage.js'
 
 const PANTRY_IDS = PANTRY.map((p) => p.id)
 const LABELS = Object.fromEntries(PANTRY.map((p) => [p.id, p.label]))
 const GROUPS = [...new Set(PANTRY.map((p) => p.group))]
+const ALL_DISHES = [...GLAZE, ...RICE]
 const BATCHES = [0.5, 1, 2, 3, 4]
+const DIETS = ['all', 'pescatarian', 'vegetarian', 'vegan', 'gluten-free']
+const DIET_SHORT = {
+  pescatarian: 'pescatarian',
+  vegetarian: 'veg',
+  vegan: 'vegan',
+  'gluten-free': 'GF',
+}
 
-const labelFor = (item) =>
-  LABELS[item] ?? item.charAt(0).toUpperCase() + item.slice(1)
+const labelFor = (item) => LABELS[item] ?? item.charAt(0).toUpperCase() + item.slice(1)
 
-function beep() {
-  try {
-    const AC = window.AudioContext || window.webkitAudioContext
-    if (!AC) return
-    const ctx = new AC()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.type = 'sine'
-    osc.frequency.value = 880
-    gain.gain.setValueAtTime(0.18, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4)
-    osc.start()
-    osc.stop(ctx.currentTime + 0.4)
-    osc.onended = () => ctx.close()
-  } catch {
-    /* audio not available — silent */
-  }
+// Collapse the diet hierarchy to the most specific badge + a GF flag.
+function dietBadges(dish) {
+  const tags = dietTags(dish)
+  const badges = []
+  if (tags.includes('vegan')) badges.push('vegan')
+  else if (tags.includes('vegetarian')) badges.push('vegetarian')
+  else if (tags.includes('pescatarian')) badges.push('pescatarian')
+  if (tags.includes('gluten-free')) badges.push('gluten-free')
+  return badges
 }
 
 export default function App() {
   const [mode, setMode] = useState('air-fryer')
   const [lane, setLane] = useState('all')
+  const [diet, setDiet] = useState('all')
+  const [query, setQuery] = useState('')
   const [hideLocked, setHideLocked] = useState(false)
   const [batch, setBatch] = useState(1)
   const [pantryOpen, setPantryOpen] = useState(false)
   const [owned, setOwned] = useState(() => new Set(loadOwned() ?? PANTRY_IDS))
   const [timers, setTimers] = useState({})
+  const [now, setNow] = useState(() => Date.now())
 
-  // Persist the pantry whenever it changes.
+  const audioCtxRef = useRef(null)
+  const timersRef = useRef(timers)
+  useEffect(() => {
+    timersRef.current = timers
+  }, [timers])
+
+  function unlockAudio() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext
+      if (!AC) return
+      if (!audioCtxRef.current) audioCtxRef.current = new AC()
+      if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume()
+    } catch {
+      /* no audio — silent */
+    }
+  }
+
+  function beep() {
+    const ctx = audioCtxRef.current
+    if (!ctx) return
+    try {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.value = 880
+      gain.gain.setValueAtTime(0.18, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.5)
+    } catch {
+      /* ignore */
+    }
+  }
+
   useEffect(() => {
     saveOwned([...owned])
   }, [owned])
 
-  // One heartbeat drives every running card timer.
+  // Single heartbeat: advance the clock and settle finished timers.
   useEffect(() => {
     const iv = setInterval(() => {
-      setTimers((prev) => {
-        let changed = false
-        const next = {}
-        for (const [id, t] of Object.entries(prev)) {
-          const nt = t.running ? tick(t) : t
-          if (nt !== t) {
-            changed = true
-            if (nt.done && !t.done) beep()
-          }
-          next[id] = nt
+      const t = Date.now()
+      const cur = timersRef.current
+      let changed = false
+      const next = {}
+      for (const [id, tm] of Object.entries(cur)) {
+        const s = settle(tm, t)
+        if (s !== tm) {
+          changed = true
+          if (s.done && !tm.done) beep()
         }
-        return changed ? next : prev
-      })
-    }, 1000)
+        next[id] = s
+      }
+      setNow(t)
+      if (changed) setTimers(next)
+    }, 250)
     return () => clearInterval(iv)
   }, [])
 
+  // Keep the screen awake while any timer runs (re-acquiring on return).
+  const anyRunning = Object.values(timers).some((t) => t.running)
+  useEffect(() => {
+    if (!anyRunning || !('wakeLock' in navigator)) return
+    let lock = null
+    let cancelled = false
+    const acquire = async () => {
+      try {
+        lock = await navigator.wakeLock.request('screen')
+      } catch {
+        /* denied — ignore */
+      }
+    }
+    acquire()
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && !cancelled) acquire()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVis)
+      if (lock) lock.release().catch(() => {})
+    }
+  }, [anyRunning])
+
   const modeDishes = mode === 'air-fryer' ? GLAZE : RICE
-  const lanes = useMemo(
-    () => ['all', ...new Set(modeDishes.map((d) => d.lane))],
-    [modeDishes],
-  )
-  const visible = useMemo(
-    () => filterDishes(modeDishes, { lane, hideLocked, owned, pantry: PANTRY_IDS }),
-    [modeDishes, lane, hideLocked, owned],
-  )
+  const lanes = useMemo(() => ['all', ...new Set(modeDishes.map((d) => d.lane))], [modeDishes])
+  const visible = useMemo(() => {
+    let list = filterDishes(modeDishes, { lane, hideLocked, owned, pantry: PANTRY_IDS })
+    list = searchDishes(list, query, labelFor)
+    if (diet !== 'all') list = list.filter((d) => matchesDiet(d, diet))
+    return list
+  }, [modeDishes, lane, hideLocked, owned, query, diet])
 
   function switchMode(next) {
     setMode(next)
@@ -95,8 +158,20 @@ export default function App() {
   const setAll = (on) => setOwned(on ? new Set(PANTRY_IDS) : new Set())
 
   const timerFor = (dish) => timers[dish.id] ?? createTimer(dish.cookSeconds)
-  const updateTimer = (dish, fn) =>
-    setTimers((prev) => ({ ...prev, [dish.id]: fn(prev[dish.id] ?? createTimer(dish.cookSeconds)) }))
+  const startTimer = (dish) => {
+    unlockAudio()
+    setTimers((p) => ({
+      ...p,
+      [dish.id]: start(p[dish.id] ?? createTimer(dish.cookSeconds), Date.now()),
+    }))
+  }
+  const pauseTimer = (dish) =>
+    setTimers((p) => ({
+      ...p,
+      [dish.id]: pause(p[dish.id] ?? createTimer(dish.cookSeconds), Date.now()),
+    }))
+  const resetTimer = (dish) =>
+    setTimers((p) => ({ ...p, [dish.id]: reset(p[dish.id] ?? createTimer(dish.cookSeconds)) }))
 
   return (
     <div className="app">
@@ -110,7 +185,10 @@ export default function App() {
           onClick={() => setPantryOpen((v) => !v)}
           aria-expanded={pantryOpen}
         >
-          Pantry <span className="count">{owned.size}/{PANTRY_IDS.length}</span>
+          Pantry{' '}
+          <span className="count">
+            {owned.size}/{PANTRY_IDS.length}
+          </span>
         </button>
       </header>
 
@@ -145,6 +223,16 @@ export default function App() {
           ))}
         </div>
 
+        <div className="search">
+          <input
+            type="search"
+            placeholder="Search dishes or ingredients…"
+            aria-label="Search dishes"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+
         <label className="hide-locked">
           <input
             type="checkbox"
@@ -167,6 +255,18 @@ export default function App() {
         ))}
       </div>
 
+      <div className="diets" aria-label="Dietary filter">
+        {DIETS.map((d) => (
+          <button
+            key={d}
+            className={`diet-chip ${diet === d ? 'active' : ''}`}
+            onClick={() => setDiet(d)}
+          >
+            {d === 'all' ? 'Any diet' : (DIET_SHORT[d] ?? d)}
+          </button>
+        ))}
+      </div>
+
       <main className="grid">
         {visible.map((dish) => (
           <DishCard
@@ -175,13 +275,14 @@ export default function App() {
             owned={owned}
             batch={batch}
             timer={dish.mode === 'air-fryer' ? timerFor(dish) : null}
-            onStart={() => updateTimer(dish, start)}
-            onPause={() => updateTimer(dish, pause)}
-            onReset={() => updateTimer(dish, reset)}
+            now={now}
+            onStart={() => startTimer(dish)}
+            onPause={() => pauseTimer(dish)}
+            onReset={() => resetTimer(dish)}
           />
         ))}
         {visible.length === 0 && (
-          <p className="empty">No dishes match — try showing locked dishes or another lane.</p>
+          <p className="empty">No dishes match — try clearing the search or another filter.</p>
         )}
       </main>
 
@@ -197,10 +298,11 @@ export default function App() {
   )
 }
 
-function DishCard({ dish, owned, batch, timer, onStart, onPause, onReset }) {
+function DishCard({ dish, owned, batch, timer, now, onStart, onPause, onReset }) {
   const missing = missingIngredients(dish, owned, PANTRY_IDS)
   const locked = missing.length > 0
   const scaled = scaleIngredients(dish.ingredients, batch)
+  const badges = dietBadges(dish)
 
   return (
     <article className={`card ${locked ? 'locked' : ''}`}>
@@ -214,6 +316,16 @@ function DishCard({ dish, owned, batch, timer, onStart, onPause, onReset }) {
       </div>
       <h3>{dish.name}</h3>
       <p className="blurb">{dish.blurb}</p>
+
+      {badges.length > 0 && (
+        <div className="diet-badges">
+          {badges.map((b) => (
+            <span key={b} className={`diet-badge ${b}`}>
+              {DIET_SHORT[b] ?? b}
+            </span>
+          ))}
+        </div>
+      )}
 
       <ul className="ingredients">
         {scaled.map((ing, i) => {
@@ -239,20 +351,19 @@ function DishCard({ dish, owned, batch, timer, onStart, onPause, onReset }) {
       </details>
 
       {timer && (
-        <CookTimer timer={timer} onStart={onStart} onPause={onPause} onReset={onReset} />
+        <CookTimer timer={timer} now={now} onStart={onStart} onPause={onPause} onReset={onReset} />
       )}
     </article>
   )
 }
 
-function CookTimer({ timer, onStart, onPause, onReset }) {
+function CookTimer({ timer, now, onStart, onPause, onReset }) {
+  const secs = remaining(timer, now)
   return (
     <div className={`timer ${timer.done ? 'done' : ''} ${timer.running ? 'running' : ''}`}>
-      <span className="clock">{formatTime(timer.remaining)}</span>
+      <span className="clock">{formatTime(secs)}</span>
       <div className="timer-btns">
-        {!timer.running && !timer.done && (
-          <button onClick={onStart}>Start</button>
-        )}
+        {!timer.running && !timer.done && <button onClick={onStart}>Start</button>}
         {timer.running && <button onClick={onPause}>Pause</button>}
         <button className="ghost" onClick={onReset}>
           Reset
@@ -264,10 +375,57 @@ function CookTimer({ timer, onStart, onPause, onReset }) {
 }
 
 function PantryDrawer({ owned, onToggle, onAll, onClose }) {
+  const ref = useRef(null)
+
+  // Focus management + Escape + a simple focus trap for the dialog.
+  useEffect(() => {
+    const node = ref.current
+    const prev = document.activeElement
+    const focusables = () =>
+      [...node.querySelectorAll('button, input, [href], [tabindex]:not([tabindex="-1"])')].filter(
+        (el) => !el.disabled && el.offsetParent !== null,
+      )
+    focusables()[0]?.focus()
+
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+        return
+      }
+      if (e.key === 'Tab') {
+        const f = focusables()
+        if (f.length === 0) return
+        const first = f[0]
+        const last = f[f.length - 1]
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
+    }
+    node.addEventListener('keydown', onKey)
+    return () => {
+      node.removeEventListener('keydown', onKey)
+      prev?.focus?.()
+    }
+  }, [onClose])
+
+  const impact = missingImpact(ALL_DISHES, owned, PANTRY_IDS).slice(0, 4)
+  const list = shoppingList(ALL_DISHES, owned, PANTRY_IDS)
+
+  const copyList = () => {
+    const text = list.map((x) => labelFor(x.item)).join('\n')
+    navigator.clipboard?.writeText(text).catch(() => {})
+  }
+
   return (
     <>
       <div className="scrim" onClick={onClose} />
-      <aside className="drawer" aria-label="Pantry">
+      <aside className="drawer" role="dialog" aria-modal="true" aria-label="Pantry" ref={ref}>
         <div className="drawer-head">
           <h2>Pantry</h2>
           <button className="close" onClick={onClose} aria-label="Close pantry">
@@ -283,6 +441,44 @@ function PantryDrawer({ owned, onToggle, onAll, onClose }) {
             Clear
           </button>
         </div>
+
+        {impact.length > 0 && (
+          <section className="insight">
+            <h4>Almost there</h4>
+            <ul className="impact">
+              {impact.map((x) => (
+                <li key={x.item}>
+                  <button className="impact-buy" onClick={() => onToggle(x.item)}>
+                    + {labelFor(x.item)}
+                  </button>
+                  <span className="impact-n">
+                    unlocks {x.unlocks} dish{x.unlocks === 1 ? '' : 'es'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {list.length > 0 && (
+          <section className="insight">
+            <div className="insight-head">
+              <h4>Shopping list ({list.length})</h4>
+              <button className="ghost small" onClick={copyList}>
+                Copy
+              </button>
+            </div>
+            <div className="shop-items">
+              {list.map((x) => (
+                <span key={x.item} className="shop-item">
+                  {labelFor(x.item)}
+                  {x.count > 1 && <em> ×{x.count}</em>}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+
         {GROUPS.map((group) => (
           <section key={group} className="pantry-group">
             <h4>{group}</h4>

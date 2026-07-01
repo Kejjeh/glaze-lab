@@ -1,27 +1,40 @@
-// Pure countdown state machine for the per-card cook timer.
-// The UI holds a timer object and calls tick() on a 1s interval.
+// Wall-clock countdown for the per-card cook timer.
+//
+// A running timer stores the epoch ms when it will end; remaining time is
+// DERIVED from the current time. This means it can never drift, even if the
+// browser froze the tab (backgrounded app, throttled interval) — when we come
+// back, remaining reflects true elapsed wall-clock time. All functions take an
+// explicit `now` (ms) so the module stays pure and testable.
 
 export function createTimer(duration) {
-  return { duration, remaining: duration, running: false, done: false }
+  return { duration, running: false, done: false, remaining: duration, endsAt: null }
 }
 
-export function start(t) {
-  return { ...t, running: true }
+export function remaining(t, now) {
+  if (t.running) return Math.max(0, Math.ceil((t.endsAt - now) / 1000))
+  return t.remaining
 }
 
-export function pause(t) {
-  return { ...t, running: false }
+export function start(t, now) {
+  if (t.done) return t
+  return { ...t, running: true, endsAt: now + t.remaining * 1000 }
+}
+
+export function pause(t, now) {
+  if (!t.running) return t
+  return { ...t, running: false, remaining: remaining(t, now), endsAt: null }
 }
 
 export function reset(t) {
   return createTimer(t.duration)
 }
 
-export function tick(t) {
-  if (!t.running) return t
-  const remaining = Math.max(0, t.remaining - 1)
-  const done = remaining === 0
-  return { ...t, remaining, done, running: !done }
+// Heartbeat helper: flip a running timer to done once its end time passes.
+export function settle(t, now) {
+  if (t.running && now >= t.endsAt) {
+    return { ...t, running: false, done: true, remaining: 0, endsAt: null }
+  }
+  return t
 }
 
 export function formatTime(seconds) {

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap');
+@import './fonts.css';
 
 :root {
   --coral: #ef5238;
@@ -93,7 +93,9 @@ body {
   font-size: 16px;
   color: var(--coral-deep);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 .mode.active {
   background: var(--coral);
@@ -155,6 +157,68 @@ body {
   accent-color: var(--coral);
 }
 
+/* ---- search ---- */
+.search {
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+.search input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-family: var(--body);
+  font-size: 14px;
+  color: var(--ink);
+}
+.search input:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 1px;
+}
+
+/* ---- diet chips + badges ---- */
+.diets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.diet-chip {
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.diet-chip.active {
+  background: #eaf6ee;
+  border-style: solid;
+  border-color: #2e9e5b;
+  color: #227a45;
+}
+.diet-badges {
+  display: flex;
+  gap: 5px;
+  margin-top: 2px;
+}
+.diet-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eaf6ee;
+  color: #227a45;
+}
+.diet-badge.gluten-free {
+  background: #fff4e0;
+  color: #9a6a12;
+}
+
 /* ---- lane chips ---- */
 .lanes {
   display: flex;
@@ -193,11 +257,22 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  transition: opacity 0.2s, filter 0.2s;
+  transition:
+    opacity 0.2s,
+    filter 0.2s;
 }
+/* Locked = tinted + muted (not low-opacity), so text stays readable/contrasty. */
 .card.locked {
-  opacity: 0.62;
-  filter: saturate(0.55);
+  background: #fbeee7;
+  border-color: #f2cdbb;
+  filter: saturate(0.75);
+}
+.card.locked h3 {
+  color: #7a5648;
+}
+.card.locked .blurb,
+.card.locked .item {
+  color: #9a8478;
 }
 .card-head {
   display: flex;
@@ -404,6 +479,92 @@ body {
 .drawer-actions button.ghost {
   background: transparent;
   color: var(--coral-deep);
+}
+.ghost.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* ---- drawer insights ---- */
+.insight {
+  margin: 14px 0;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.insight h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.insight-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.impact {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.impact li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+.impact-buy {
+  border: 1px solid var(--coral);
+  background: #fff;
+  color: var(--coral-deep);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+.impact-n {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.shop-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.shop-item {
+  font-size: 12.5px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.shop-item em {
+  font-style: normal;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+/* ---- focus + motion ---- */
+button:focus-visible,
+[role='tab']:focus-visible,
+label:focus-within {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 .pantry-group h4 {
   margin: 14px 0 6px;

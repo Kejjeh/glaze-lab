@@ -288,7 +288,10 @@ export const RICE = [
       { item: 'scallion', amount: 1, unit: 'stalk' },
       { item: 'soy', amount: 1, unit: 'tsp' },
     ],
-    ['Rinse rice; cook with water and salmon on top.', 'Flake salmon in, fold, and finish with furikake, scallion and soy.'],
+    [
+      'Rinse rice; cook with water and salmon on top.',
+      'Flake salmon in, fold, and finish with furikake, scallion and soy.',
+    ],
   ),
   rice(
     'r-chicken-ginger',
@@ -303,7 +306,10 @@ export const RICE = [
       { item: 'garlic', amount: 2, unit: 'cloves' },
       { item: 'scallion', amount: 1, unit: 'stalk' },
     ],
-    ['Rub chicken with ginger and garlic.', 'Cook over rinsed rice in stock; slice and top with scallion.'],
+    [
+      'Rub chicken with ginger and garlic.',
+      'Cook over rinsed rice in stock; slice and top with scallion.',
+    ],
   ),
   rice(
     'r-mushroom-shoyu',
@@ -318,7 +324,10 @@ export const RICE = [
       { item: 'mirin', amount: 1, unit: 'tbsp' },
       { item: 'scallion', amount: 1, unit: 'stalk' },
     ],
-    ['Slice shiitake over rinsed rice with soy and mirin.', 'Cook, fold, and finish with scallion.'],
+    [
+      'Slice shiitake over rinsed rice with soy and mirin.',
+      'Cook, fold, and finish with scallion.',
+    ],
   ),
   rice(
     'r-egg-scallion',
@@ -333,7 +342,10 @@ export const RICE = [
       { item: 'sesameoil', amount: 1, unit: 'tsp' },
       { item: 'soy', amount: 1, unit: 'tsp' },
     ],
-    ['Cook rice.', 'Fold beaten egg into the hot rice on Keep-Warm; finish with scallion, sesame oil and soy.'],
+    [
+      'Cook rice.',
+      'Fold beaten egg into the hot rice on Keep-Warm; finish with scallion, sesame oil and soy.',
+    ],
   ),
   // Spicy
   rice(
@@ -349,7 +361,10 @@ export const RICE = [
       { item: 'sesameoil', amount: 1, unit: 'tsp' },
       { item: 'soy', amount: 1, unit: 'tsp' },
     ],
-    ['Chop kimchi and layer over rinsed rice with its juice.', 'Cook, fold, finish with scallion, sesame oil and soy.'],
+    [
+      'Chop kimchi and layer over rinsed rice with its juice.',
+      'Cook, fold, finish with scallion, sesame oil and soy.',
+    ],
   ),
   rice(
     'r-gochujang-tofu',
@@ -379,7 +394,10 @@ export const RICE = [
       { item: 'sriracha', amount: 1, unit: 'tbsp' },
       { item: 'garlic', amount: 1, unit: 'clove' },
     ],
-    ['Toss shrimp with sriracha and garlic.', 'Add shrimp and peas for the last 8 minutes; fold to combine.'],
+    [
+      'Toss shrimp with sriracha and garlic.',
+      'Add shrimp and peas for the last 8 minutes; fold to combine.',
+    ],
   ),
   rice(
     'r-harissa-chickpea',
@@ -394,7 +412,10 @@ export const RICE = [
       { item: 'spinach', amount: 1, unit: 'cup' },
       { item: 'garlic', amount: 1, unit: 'clove' },
     ],
-    ['Stir harissa and garlic through rice and stock; add chickpeas.', 'Fold spinach in at the end to wilt.'],
+    [
+      'Stir harissa and garlic through rice and stock; add chickpeas.',
+      'Fold spinach in at the end to wilt.',
+    ],
   ),
   // Veggie
   rice(
@@ -496,7 +517,10 @@ export const RICE = [
       { item: 'currypaste', amount: 1.5, unit: 'tbsp' },
       { item: 'basil', amount: 0.25, unit: 'cup' },
     ],
-    ['Whisk curry paste into coconut milk; add chicken.', 'Cook over jasmine rice; fold basil in at the end.'],
+    [
+      'Whisk curry paste into coconut milk; add chicken.',
+      'Cook over jasmine rice; fold basil in at the end.',
+    ],
   ),
   rice(
     'r-coconut-shrimp-curry',
@@ -510,7 +534,10 @@ export const RICE = [
       { item: 'currypaste', amount: 1, unit: 'tbsp' },
       { item: 'bellpepper', amount: 1, unit: 'each' },
     ],
-    ['Cook jasmine in coconut milk with curry paste and pepper.', 'Add shrimp for the last 8 minutes.'],
+    [
+      'Cook jasmine in coconut milk with curry paste and pepper.',
+      'Add shrimp for the last 8 minutes.',
+    ],
   ),
   rice(
     'r-peanut-tofu',
@@ -526,7 +553,10 @@ export const RICE = [
       { item: 'lime', amount: 0.5, unit: 'each' },
       { item: 'cilantro', amount: 0.25, unit: 'cup' },
     ],
-    ['Cook jasmine with cubed tofu.', 'Loosen peanut butter with soy and lime; fold through with cilantro.'],
+    [
+      'Cook jasmine with cubed tofu.',
+      'Loosen peanut butter with soy and lime; fold through with cilantro.',
+    ],
   ),
   rice(
     'r-coconut-lentil',
