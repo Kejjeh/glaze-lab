@@ -1,13 +1,25 @@
-// Salmon Lab recipe data.
-// - PANTRY: the toggleable ingredient master list. A dish greys out when the
-//   cook is out of any pantry item it needs.
+// Glaze Lab recipe data.
+// - PROTEINS: the swappable protein axis. Each carries its own air-fryer cook
+//   time (salmon ≠ chicken thigh) and a default amount/unit.
+// - PANTRY: the toggleable ingredient master list (proteins included, so they
+//   gate dishes too). A dish greys out when the cook is out of anything it needs.
 // - STAPLES: always-on basics (salt, oil, water...) that never gate a dish.
-// - GLAZE: 10 air-fryer salmon glaze builds (each carries a cook timer).
-// - RICE: 24 rice-cooker dishes.
-// A dish ingredient's `item` must be a PANTRY id or a STAPLES id
+// - GLAZE: 10 air-fryer glaze *builds* — protein-agnostic; the picked protein is
+//   injected at render (see lib/protein.js) with its own cook timer.
+// - RICE: 24 rice-cooker dishes. The protein-forward ones set `usesProtein`;
+//   the veg/plain ones are fixed.
+// A build ingredient's `item` must be a PANTRY id or a STAPLES id
 // (enforced by recipes.test.js).
 
 export const STAPLES = new Set(['salt', 'pepper', 'water', 'oil', 'sugar', 'butter', 'egg'])
+
+export const PROTEINS = [
+  { id: 'salmon', label: 'Salmon', amount: 2, unit: 'fillets', cookSeconds: 540 },
+  { id: 'chickenthigh', label: 'Chicken thigh', amount: 2, unit: 'thighs', cookSeconds: 1020 },
+  { id: 'chickenbreast', label: 'Chicken breast', amount: 1, unit: 'breast', cookSeconds: 840 },
+  { id: 'shrimp', label: 'Shrimp', amount: 200, unit: 'g', cookSeconds: 480 },
+  { id: 'tofu', label: 'Firm tofu', amount: 200, unit: 'g', cookSeconds: 900 },
+]
 
 export const PANTRY = [
   // Glaze & sauce
@@ -46,8 +58,9 @@ export const PANTRY = [
   { id: 'bellpepper', label: 'Bell pepper', group: 'Produce' },
   { id: 'kimchi', label: 'Kimchi', group: 'Produce' },
   // Protein
-  { id: 'salmon', label: 'Salmon fillet', group: 'Protein' },
-  { id: 'chicken', label: 'Chicken thigh', group: 'Protein' },
+  { id: 'salmon', label: 'Salmon', group: 'Protein' },
+  { id: 'chickenthigh', label: 'Chicken thigh', group: 'Protein' },
+  { id: 'chickenbreast', label: 'Chicken breast', group: 'Protein' },
   { id: 'shrimp', label: 'Shrimp', group: 'Protein' },
   { id: 'tofu', label: 'Firm tofu', group: 'Protein' },
   { id: 'chickpea', label: 'Chickpeas', group: 'Protein' },
@@ -60,25 +73,27 @@ export const PANTRY = [
   { id: 'sesameseed', label: 'Sesame seeds', group: 'Finish' },
 ]
 
+// Air-fryer glaze builds — protein-agnostic. The protein (and its cook time) is
+// injected at render, so steps reference "the protein" and lean on the timer
+// rather than hard-coding minutes.
 export const GLAZE = [
   {
     id: 'g-miso-maple',
     name: 'Miso–Maple Glaze',
     mode: 'air-fryer',
     lane: 'Sweet & Sticky',
+    usesProtein: true,
     blurb: 'Deeply savoury miso rounded out with maple. The house build.',
-    cookSeconds: 540,
     ingredients: [
-      { item: 'salmon', amount: 2, unit: 'fillets' },
       { item: 'miso', amount: 2, unit: 'tbsp' },
       { item: 'maple', amount: 1, unit: 'tbsp' },
       { item: 'mirin', amount: 1, unit: 'tbsp' },
       { item: 'soy', amount: 1, unit: 'tsp' },
     ],
     steps: [
-      'Pat salmon dry and season lightly with salt.',
+      'Pat the protein dry and season lightly with salt.',
       'Whisk miso, maple, mirin and soy into a glaze.',
-      'Brush half over the salmon; air-fry at 400°F for 9 minutes.',
+      'Brush half over the protein and air-fry at 400°F — use the timer.',
       'Brush with the rest and rest 2 minutes before serving.',
     ],
   },
@@ -87,10 +102,9 @@ export const GLAZE = [
     name: 'Honey–Sriracha',
     mode: 'air-fryer',
     lane: 'Spicy',
+    usesProtein: true,
     blurb: 'Sweet heat with a garlicky edge and a lacquered finish.',
-    cookSeconds: 540,
     ingredients: [
-      { item: 'salmon', amount: 2, unit: 'fillets' },
       { item: 'honey', amount: 2, unit: 'tbsp' },
       { item: 'sriracha', amount: 1, unit: 'tbsp' },
       { item: 'soy', amount: 1, unit: 'tsp' },
@@ -98,7 +112,7 @@ export const GLAZE = [
     ],
     steps: [
       'Mince garlic and whisk with honey, sriracha and soy.',
-      'Coat the salmon and air-fry at 400°F for 9 minutes.',
+      'Coat the protein and air-fry at 400°F — use the timer.',
       'Spoon over pan glaze and finish under a minute of high heat.',
     ],
   },
@@ -107,10 +121,9 @@ export const GLAZE = [
     name: 'Gochujang–Lime',
     mode: 'air-fryer',
     lane: 'Spicy',
+    usesProtein: true,
     blurb: 'Funky Korean chili paste brightened with fresh lime.',
-    cookSeconds: 540,
     ingredients: [
-      { item: 'salmon', amount: 2, unit: 'fillets' },
       { item: 'gochujang', amount: 1.5, unit: 'tbsp' },
       { item: 'honey', amount: 1, unit: 'tbsp' },
       { item: 'lime', amount: 0.5, unit: 'each' },
@@ -118,7 +131,7 @@ export const GLAZE = [
     ],
     steps: [
       'Whisk gochujang, honey, lime juice and sesame oil.',
-      'Glaze the salmon and air-fry at 400°F for 9 minutes.',
+      'Glaze the protein and air-fry at 400°F — use the timer.',
       'Zest lime over the top before serving.',
     ],
   },
@@ -127,10 +140,9 @@ export const GLAZE = [
     name: 'Teriyaki–Ginger',
     mode: 'air-fryer',
     lane: 'Umami',
+    usesProtein: true,
     blurb: 'Classic soy–mirin teriyaki with a hit of fresh ginger.',
-    cookSeconds: 540,
     ingredients: [
-      { item: 'salmon', amount: 2, unit: 'fillets' },
       { item: 'soy', amount: 2, unit: 'tbsp' },
       { item: 'mirin', amount: 1, unit: 'tbsp' },
       { item: 'brownsugar', amount: 1, unit: 'tbsp' },
@@ -138,7 +150,7 @@ export const GLAZE = [
     ],
     steps: [
       'Simmer soy, mirin, brown sugar and grated ginger 2 minutes to thicken.',
-      'Brush salmon and air-fry at 400°F for 9 minutes.',
+      'Brush the protein and air-fry at 400°F — use the timer.',
       'Finish with the reduced teriyaki.',
     ],
   },
@@ -147,17 +159,16 @@ export const GLAZE = [
     name: 'Dijon–Maple',
     mode: 'air-fryer',
     lane: 'Sweet & Sticky',
-    blurb: 'Sharp mustard and maple — a five-minute crowd-pleaser.',
-    cookSeconds: 540,
+    usesProtein: true,
+    blurb: 'Sharp mustard and maple — a five-minute mix-and-go.',
     ingredients: [
-      { item: 'salmon', amount: 2, unit: 'fillets' },
       { item: 'dijon', amount: 1.5, unit: 'tbsp' },
       { item: 'maple', amount: 1.5, unit: 'tbsp' },
       { item: 'lemon', amount: 0.5, unit: 'each' },
     ],
     steps: [
       'Whisk Dijon, maple and lemon juice.',
-      'Coat salmon and air-fry at 400°F for 9 minutes until glossy.',
+      'Coat the protein and air-fry at 400°F until glossy — use the timer.',
     ],
   },
   {
@@ -165,10 +176,9 @@ export const GLAZE = [
     name: 'Orange–Soy',
     mode: 'air-fryer',
     lane: 'Citrus',
+    usesProtein: true,
     blurb: 'Bright citrus soy that caramelises at the edges.',
-    cookSeconds: 540,
     ingredients: [
-      { item: 'salmon', amount: 2, unit: 'fillets' },
       { item: 'orange', amount: 1, unit: 'each' },
       { item: 'soy', amount: 1, unit: 'tbsp' },
       { item: 'honey', amount: 1, unit: 'tbsp' },
@@ -176,7 +186,7 @@ export const GLAZE = [
     ],
     steps: [
       'Reduce orange juice with soy, honey and ginger until syrupy.',
-      'Glaze salmon and air-fry at 400°F for 9 minutes.',
+      'Glaze the protein and air-fry at 400°F — use the timer.',
       'Brush again and add a little zest.',
     ],
   },
@@ -185,10 +195,9 @@ export const GLAZE = [
     name: 'Lemon–Garlic Butter',
     mode: 'air-fryer',
     lane: 'Citrus',
+    usesProtein: true,
     blurb: 'Buttery, garlicky, and sharp with lemon. Always works.',
-    cookSeconds: 480,
     ingredients: [
-      { item: 'salmon', amount: 2, unit: 'fillets' },
       { item: 'butter', amount: 1, unit: 'tbsp' },
       { item: 'garlic', amount: 2, unit: 'cloves' },
       { item: 'lemon', amount: 0.5, unit: 'each' },
@@ -196,7 +205,7 @@ export const GLAZE = [
     ],
     steps: [
       'Melt butter with minced garlic, lemon juice and Dijon.',
-      'Spoon over salmon and air-fry at 400°F for 8 minutes.',
+      'Spoon over the protein and air-fry at 400°F — use the timer.',
       'Baste with pan butter before serving.',
     ],
   },
@@ -205,18 +214,17 @@ export const GLAZE = [
     name: 'Miso–Furikake Crunch',
     mode: 'air-fryer',
     lane: 'Umami',
+    usesProtein: true,
     blurb: 'Miso glaze finished with a seaweed-sesame furikake crust.',
-    cookSeconds: 540,
     ingredients: [
-      { item: 'salmon', amount: 2, unit: 'fillets' },
       { item: 'miso', amount: 1.5, unit: 'tbsp' },
       { item: 'mirin', amount: 1, unit: 'tbsp' },
       { item: 'furikake', amount: 1, unit: 'tbsp' },
       { item: 'sesameseed', amount: 1, unit: 'tsp' },
     ],
     steps: [
-      'Whisk miso and mirin; brush over salmon.',
-      'Air-fry at 400°F for 8 minutes.',
+      'Whisk miso and mirin; brush over the protein.',
+      'Air-fry at 400°F — use the timer.',
       'Shower with furikake and sesame; 1 more minute to set.',
     ],
   },
@@ -225,10 +233,9 @@ export const GLAZE = [
     name: 'Harissa–Honey',
     mode: 'air-fryer',
     lane: 'Spicy',
+    usesProtein: true,
     blurb: 'North-African chili paste with honey and lemon.',
-    cookSeconds: 540,
     ingredients: [
-      { item: 'salmon', amount: 2, unit: 'fillets' },
       { item: 'harissa', amount: 1, unit: 'tbsp' },
       { item: 'honey', amount: 1, unit: 'tbsp' },
       { item: 'lemon', amount: 0.5, unit: 'each' },
@@ -236,7 +243,7 @@ export const GLAZE = [
     ],
     steps: [
       'Mix harissa, honey, lemon and minced garlic.',
-      'Coat salmon and air-fry at 400°F for 9 minutes.',
+      'Coat the protein and air-fry at 400°F — use the timer.',
     ],
   },
   {
@@ -244,10 +251,9 @@ export const GLAZE = [
     name: 'Scallion–Sesame',
     mode: 'air-fryer',
     lane: 'Herby',
+    usesProtein: true,
     blurb: 'A light soy-sesame glaze piled with scallion at the end.',
-    cookSeconds: 540,
     ingredients: [
-      { item: 'salmon', amount: 2, unit: 'fillets' },
       { item: 'soy', amount: 1, unit: 'tbsp' },
       { item: 'sesameoil', amount: 1, unit: 'tsp' },
       { item: 'ricevinegar', amount: 1, unit: 'tsp' },
@@ -256,60 +262,61 @@ export const GLAZE = [
     ],
     steps: [
       'Whisk soy, sesame oil and rice vinegar.',
-      'Glaze salmon and air-fry at 400°F for 9 minutes.',
+      'Glaze the protein and air-fry at 400°F — use the timer.',
       'Top with sliced scallion and toasted sesame.',
     ],
   },
 ]
 
-// Helper to keep the 24 rice entries terse and consistent.
-const rice = (id, name, lane, blurb, ingredients, steps) => ({
+// rice-cooker builder. `usesProtein` bowls get the picked protein at render.
+const rice = (id, name, lane, blurb, ingredients, steps, usesProtein = false) => ({
   id,
   name,
   mode: 'rice-cooker',
   lane,
   blurb,
+  usesProtein,
   ingredients,
   steps,
 })
 
 export const RICE = [
-  // Comfort
+  // Comfort — protein-swappable bowls
   rice(
-    'r-salmon-furikake',
-    'Salmon Furikake Bowl',
+    'r-furikake-bowl',
+    'Furikake Rice Bowl',
     'Comfort',
-    'Flaked salmon over rice with furikake and scallion.',
+    'Your protein over rice with furikake and scallion.',
     [
       { item: 'rice', amount: 1.5, unit: 'cups' },
       { item: 'water', amount: 1.75, unit: 'cups' },
-      { item: 'salmon', amount: 1, unit: 'fillet' },
       { item: 'furikake', amount: 1, unit: 'tbsp' },
       { item: 'scallion', amount: 1, unit: 'stalk' },
       { item: 'soy', amount: 1, unit: 'tsp' },
     ],
     [
-      'Rinse rice; cook with water and salmon on top.',
-      'Flake salmon in, fold, and finish with furikake, scallion and soy.',
+      'Rinse rice; cook with the protein set on top.',
+      'Flake or fold the protein through and finish with furikake, scallion and soy.',
     ],
+    true,
   ),
   rice(
-    'r-chicken-ginger',
-    'Chicken & Ginger Rice',
+    'r-ginger-rice',
+    'Ginger Rice',
     'Comfort',
-    'One-pot Hainanese-style chicken rice, all in the cooker.',
+    'One-pot ginger-garlic rice built around your protein.',
     [
       { item: 'rice', amount: 1.5, unit: 'cups' },
       { item: 'stock', amount: 1.75, unit: 'cups' },
-      { item: 'chicken', amount: 250, unit: 'g' },
       { item: 'ginger', amount: 1, unit: 'tbsp' },
       { item: 'garlic', amount: 2, unit: 'cloves' },
       { item: 'scallion', amount: 1, unit: 'stalk' },
     ],
     [
-      'Rub chicken with ginger and garlic.',
-      'Cook over rinsed rice in stock; slice and top with scallion.',
+      'Rub the protein with ginger and garlic.',
+      'Cook over rinsed rice in stock; slice or fold in and top with scallion.',
     ],
+    true,
   ),
   rice(
     'r-mushroom-shoyu',
@@ -367,37 +374,40 @@ export const RICE = [
     ],
   ),
   rice(
-    'r-gochujang-tofu',
-    'Gochujang Tofu Rice',
+    'r-gochujang-rice',
+    'Gochujang Rice',
     'Spicy',
-    'Spicy-sweet gochujang glazing crumbled tofu.',
+    'Spicy-sweet gochujang glazing your protein over rice.',
     [
       { item: 'rice', amount: 1.5, unit: 'cups' },
       { item: 'water', amount: 1.75, unit: 'cups' },
-      { item: 'tofu', amount: 200, unit: 'g' },
       { item: 'gochujang', amount: 1, unit: 'tbsp' },
       { item: 'garlic', amount: 1, unit: 'clove' },
       { item: 'scallion', amount: 1, unit: 'stalk' },
     ],
-    ['Toss tofu with gochujang and garlic; set over rinsed rice.', 'Cook and fold with scallion.'],
+    [
+      'Toss the protein with gochujang and garlic; set over rinsed rice.',
+      'Cook and fold with scallion.',
+    ],
+    true,
   ),
   rice(
-    'r-shrimp-pea',
-    'Spicy Shrimp & Pea Rice',
+    'r-chili-garlic-peas',
+    'Chili-Garlic Rice & Peas',
     'Spicy',
-    'Sriracha shrimp cooked through with sweet peas.',
+    'Sriracha and garlic over your protein with sweet peas.',
     [
       { item: 'rice', amount: 1.5, unit: 'cups' },
       { item: 'water', amount: 1.75, unit: 'cups' },
-      { item: 'shrimp', amount: 200, unit: 'g' },
       { item: 'peas', amount: 0.5, unit: 'cup' },
       { item: 'sriracha', amount: 1, unit: 'tbsp' },
       { item: 'garlic', amount: 1, unit: 'clove' },
     ],
     [
-      'Toss shrimp with sriracha and garlic.',
-      'Add shrimp and peas for the last 8 minutes; fold to combine.',
+      'Toss the protein with sriracha and garlic.',
+      'Add it and the peas for the last stretch of the cook; fold to combine.',
     ],
+    true,
   ),
   rice(
     'r-harissa-chickpea',
@@ -477,19 +487,19 @@ export const RICE = [
     ['Cook rice with sliced shiitake, garlic and soy.', 'Fold spinach in to wilt.'],
   ),
   rice(
-    'r-tofu-bellpepper',
-    'Tofu & Bell Pepper Rice',
+    'r-ginger-pepper',
+    'Ginger Pepper Rice',
     'Veggie',
-    'Soft tofu and sweet peppers with ginger-soy.',
+    'Sweet peppers and your protein with ginger-soy.',
     [
       { item: 'rice', amount: 1.5, unit: 'cups' },
       { item: 'water', amount: 1.75, unit: 'cups' },
-      { item: 'tofu', amount: 200, unit: 'g' },
       { item: 'bellpepper', amount: 1, unit: 'each' },
       { item: 'soy', amount: 1, unit: 'tbsp' },
       { item: 'ginger', amount: 1, unit: 'tsp' },
     ],
-    ['Cube tofu and pepper; layer over rice with soy and ginger.', 'Cook and fold gently.'],
+    ['Cube the protein and pepper; layer over rice with soy and ginger.', 'Cook and fold gently.'],
+    true,
   ),
   // Coconut & Curry
   rice(
@@ -506,57 +516,57 @@ export const RICE = [
     ['Rinse jasmine; cook with coconut milk, water and salt.', 'Fluff and rest 5 minutes.'],
   ),
   rice(
-    'r-green-curry-chicken',
-    'Green Curry Chicken Rice',
+    'r-green-curry',
+    'Green Curry Rice',
     'Coconut & Curry',
-    'Thai green curry chicken simmered into jasmine rice.',
+    'Thai green curry simmered into jasmine rice with your protein.',
     [
       { item: 'jasmine', amount: 1.5, unit: 'cups' },
       { item: 'coconutmilk', amount: 1, unit: 'cup' },
-      { item: 'chicken', amount: 250, unit: 'g' },
       { item: 'currypaste', amount: 1.5, unit: 'tbsp' },
       { item: 'basil', amount: 0.25, unit: 'cup' },
     ],
     [
-      'Whisk curry paste into coconut milk; add chicken.',
+      'Whisk curry paste into coconut milk; add the protein.',
       'Cook over jasmine rice; fold basil in at the end.',
     ],
+    true,
   ),
   rice(
-    'r-coconut-shrimp-curry',
-    'Coconut Shrimp Curry Rice',
+    'r-coconut-curry',
+    'Coconut Curry Rice',
     'Coconut & Curry',
-    'Sweet shrimp and peppers in a coconut curry rice.',
+    'Sweet peppers and your protein in a coconut curry rice.',
     [
       { item: 'jasmine', amount: 1.5, unit: 'cups' },
       { item: 'coconutmilk', amount: 1, unit: 'cup' },
-      { item: 'shrimp', amount: 200, unit: 'g' },
       { item: 'currypaste', amount: 1, unit: 'tbsp' },
       { item: 'bellpepper', amount: 1, unit: 'each' },
     ],
     [
       'Cook jasmine in coconut milk with curry paste and pepper.',
-      'Add shrimp for the last 8 minutes.',
+      'Add the protein for the last stretch of the cook.',
     ],
+    true,
   ),
   rice(
-    'r-peanut-tofu',
-    'Peanut Tofu Rice',
+    'r-peanut-rice',
+    'Peanut Rice',
     'Coconut & Curry',
-    'Creamy peanut-lime sauce over tofu and rice.',
+    'Creamy peanut-lime sauce over your protein and rice.',
     [
       { item: 'jasmine', amount: 1.5, unit: 'cups' },
       { item: 'water', amount: 1.75, unit: 'cups' },
-      { item: 'tofu', amount: 200, unit: 'g' },
       { item: 'peanut', amount: 2, unit: 'tbsp' },
       { item: 'soy', amount: 1, unit: 'tbsp' },
       { item: 'lime', amount: 0.5, unit: 'each' },
       { item: 'cilantro', amount: 0.25, unit: 'cup' },
     ],
     [
-      'Cook jasmine with cubed tofu.',
+      'Cook jasmine with the protein.',
       'Loosen peanut butter with soy and lime; fold through with cilantro.',
     ],
+    true,
   ),
   rice(
     'r-coconut-lentil',
@@ -657,9 +667,4 @@ export const RICE = [
     ],
     ['Cook rice.', 'Warm ginger and scallion in sesame oil; fold through with soy.'],
   ),
-]
-
-export const MODES = [
-  { id: 'air-fryer', label: 'Air-Fryer', dishes: GLAZE },
-  { id: 'rice-cooker', label: 'Rice-Cooker', dishes: RICE },
 ]

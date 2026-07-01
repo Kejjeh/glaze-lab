@@ -1,9 +1,9 @@
 {
-  "name": "salmon-lab",
+  "name": "glaze-lab",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
-  "description": "Salmon Lab — air-fryer glaze builds & rice-cooker dishes with a shared pantry, batch scaling, lane filters, and cook timers.",
+  "description": "Glaze Lab — multi-protein air-fryer glaze builds & rice-cooker bowls with a shared pantry, batch scaling, lane filters, and cook timers.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

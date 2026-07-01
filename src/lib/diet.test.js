@@ -22,7 +22,7 @@ describe('dietTags (derived from ingredients)', () => {
   })
 
   it('never tags a chicken dish pescatarian/vegetarian/vegan', () => {
-    expect(dietTags(dish('chicken', 'stock'))).toEqual(['gluten-free'])
+    expect(dietTags(dish('chickenthigh', 'stock'))).toEqual(['gluten-free'])
   })
 })
 

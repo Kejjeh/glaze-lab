@@ -9,12 +9,12 @@ afterEach(cleanup)
 
 const cardOf = (matcher) => screen.getByText(matcher).closest('article')
 
-describe('Salmon Lab app', () => {
+describe('Glaze Lab app', () => {
   it('swaps the card set when the cooking mode is toggled', () => {
     render(<App />)
     expect(screen.getByText(/Miso.+Maple Glaze/)).toBeTruthy() // air-fryer default
     fireEvent.click(screen.getByRole('tab', { name: /Rice-Cooker/i }))
-    expect(screen.getByText('Salmon Furikake Bowl')).toBeTruthy()
+    expect(screen.getByText('Furikake Rice Bowl')).toBeTruthy()
     expect(screen.queryByText(/Miso.+Maple Glaze/)).toBeNull()
   })
 
@@ -26,15 +26,6 @@ describe('Salmon Lab app', () => {
     expect(card.className).toContain('locked')
     expect(card.textContent).toContain('needs:')
     expect(card.textContent).toContain('White miso')
-  })
-
-  it('gates the same ingredient across both modes', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /Pantry/i }))
-    fireEvent.click(screen.getByLabelText('Salmon fillet'))
-    expect(cardOf(/Miso.+Maple Glaze/).className).toContain('locked')
-    fireEvent.click(screen.getByRole('tab', { name: /Rice-Cooker/i }))
-    expect(cardOf('Salmon Furikake Bowl').className).toContain('locked')
   })
 
   it('rescales ingredient amounts with the batch selector', () => {
@@ -60,12 +51,12 @@ describe('Salmon Lab app', () => {
     expect(screen.queryByText(/Miso.+Maple Glaze/)).toBeNull()
   })
 
-  it('filters by dietary tag', () => {
+  it('filters by dietary tag, reflecting the chosen protein', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('tab', { name: /Rice-Cooker/i }))
     fireEvent.click(screen.getByRole('button', { name: 'vegan' }))
-    expect(screen.getByText('Coconut Jasmine Rice')).toBeTruthy() // no animal products
-    expect(screen.queryByText('Salmon Furikake Bowl')).toBeNull() // has salmon
+    expect(screen.getByText('Coconut Jasmine Rice')).toBeTruthy() // fixed, no animal products
+    expect(screen.queryByText('Furikake Rice Bowl')).toBeNull() // salmon by default → pescatarian
   })
 
   it('resets the lane filter to All when switching modes', () => {
@@ -77,7 +68,7 @@ describe('Salmon Lab app', () => {
   })
 
   it('restores the saved pantry on mount', () => {
-    localStorage.setItem('salmonlab.pantry.v1', JSON.stringify(['salmon']))
+    localStorage.setItem('glazelab.pantry.v1', JSON.stringify(['salmon']))
     render(<App />)
     expect(screen.getByRole('button', { name: /Pantry/i }).textContent).toContain(
       `1/${PANTRY.length}`,
@@ -100,5 +91,33 @@ describe('Salmon Lab app', () => {
     expect(dialog.textContent).toContain('Almost there')
     expect(dialog.textContent).toContain('unlocks 2 dishes')
     expect(dialog.textContent).toContain('Shopping list')
+  })
+
+  // ---- protein axis ----
+
+  it('injects the chosen protein and its cook time into a glaze build', () => {
+    render(<App />)
+    const card = () => cardOf(/Miso.+Maple Glaze/)
+    expect(card().textContent).toContain('Salmon') // default protein
+    expect(card().textContent).toContain('9:00') // salmon = 540s
+    fireEvent.click(screen.getByRole('button', { name: 'Chicken thigh' }))
+    expect(card().textContent).toContain('Chicken thigh')
+    expect(card().textContent).toContain('17:00') // chicken thigh = 1020s
+  })
+
+  it('gates every protein-using dish when the chosen protein is unchecked', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /Pantry/i }))
+    fireEvent.click(screen.getByLabelText('Salmon')) // out of the default protein
+    expect(cardOf(/Miso.+Maple Glaze/).className).toContain('locked') // every glaze
+    fireEvent.click(screen.getByRole('tab', { name: /Rice-Cooker/i }))
+    expect(cardOf('Furikake Rice Bowl').className).toContain('locked') // swappable bowl
+    expect(cardOf('Coconut Jasmine Rice').className).not.toContain('locked') // fixed, no protein
+  })
+
+  it('remembers the chosen protein across a remount', () => {
+    localStorage.setItem('glazelab.protein.v1', 'tofu')
+    render(<App />)
+    expect(cardOf(/Miso.+Maple Glaze/).textContent).toContain('Firm tofu')
   })
 })

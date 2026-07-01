@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { GLAZE, RICE, PANTRY, STAPLES } from './recipes.js'
+import { GLAZE, RICE, PANTRY, STAPLES, PROTEINS } from './recipes.js'
 
 const pantryIds = new Set(PANTRY.map((p) => p.id))
 const allowed = new Set([...pantryIds, ...STAPLES])
@@ -21,7 +21,7 @@ describe('recipe data integrity', () => {
     expect(RICE.every((d) => d.mode === 'rice-cooker')).toBe(true)
   })
 
-  it('references only known pantry items or staples in ingredients', () => {
+  it('references only known pantry items or staples in base ingredients', () => {
     for (const d of dishes) {
       for (const ing of d.ingredients) {
         expect(allowed.has(ing.item), `${d.id} uses unknown item "${ing.item}"`).toBe(true)
@@ -29,8 +29,17 @@ describe('recipe data integrity', () => {
     }
   })
 
-  it('gives every air-fryer glaze build a positive cook timer', () => {
-    expect(GLAZE.every((d) => Number.isInteger(d.cookSeconds) && d.cookSeconds > 0)).toBe(true)
+  it('makes every air-fryer glaze protein-swappable (so it gets a cook timer)', () => {
+    expect(GLAZE.every((d) => d.usesProtein === true)).toBe(true)
+  })
+
+  it('leaves the protein out of a build base — it is injected at render', () => {
+    const proteinIds = new Set(PROTEINS.map((p) => p.id))
+    for (const d of dishes) {
+      for (const ing of d.ingredients) {
+        expect(proteinIds.has(ing.item), `${d.id} hard-codes protein "${ing.item}"`).toBe(false)
+      }
+    }
   })
 
   it('gives every dish a name, lane, an ingredient, and a step', () => {
@@ -51,5 +60,26 @@ describe('recipe data integrity', () => {
         expect(typeof ing.unit, `${d.id} unit`).toBe('string')
       }
     }
+  })
+})
+
+describe('proteins', () => {
+  it('offers salmon plus at least three other proteins', () => {
+    expect(PROTEINS.length).toBeGreaterThanOrEqual(4)
+    expect(PROTEINS.some((p) => p.id === 'salmon')).toBe(true)
+  })
+
+  it('makes every protein a real pantry item with a positive air-fryer cook time', () => {
+    for (const p of PROTEINS) {
+      expect(pantryIds.has(p.id), `${p.id} not in pantry`).toBe(true)
+      expect(Number.isInteger(p.cookSeconds) && p.cookSeconds > 0, `${p.id} cookSeconds`).toBe(true)
+      expect(typeof p.amount, `${p.id} amount`).toBe('number')
+      expect(typeof p.unit, `${p.id} unit`).toBe('string')
+    }
+  })
+
+  it('has some protein-swappable rice bowls and some fixed veg/plain ones', () => {
+    expect(RICE.some((d) => d.usesProtein === true)).toBe(true)
+    expect(RICE.some((d) => !d.usesProtein)).toBe(true)
   })
 })

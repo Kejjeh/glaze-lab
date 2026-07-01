@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { PANTRY, STAPLES, GLAZE, RICE } from './data/recipes.js'
+import { PANTRY, STAPLES, GLAZE, RICE, PROTEINS } from './data/recipes.js'
 import { missingIngredients } from './lib/pantry.js'
+import { applyProtein } from './lib/protein.js'
 import { filterDishes } from './lib/filters.js'
 import { searchDishes } from './lib/search.js'
 import { dietTags, matchesDiet } from './lib/diet.js'
@@ -12,7 +13,6 @@ import { loadOwned, saveOwned } from './lib/storage.js'
 const PANTRY_IDS = PANTRY.map((p) => p.id)
 const LABELS = Object.fromEntries(PANTRY.map((p) => [p.id, p.label]))
 const GROUPS = [...new Set(PANTRY.map((p) => p.group))]
-const ALL_DISHES = [...GLAZE, ...RICE]
 const BATCHES = [0.5, 1, 2, 3, 4]
 const DIETS = ['all', 'pescatarian', 'vegetarian', 'vegan', 'gluten-free']
 const DIET_SHORT = {
@@ -21,8 +21,13 @@ const DIET_SHORT = {
   vegan: 'vegan',
   'gluten-free': 'GF',
 }
+const PROTEIN_KEY = 'glazelab.protein.v1'
 
 const labelFor = (item) => LABELS[item] ?? item.charAt(0).toUpperCase() + item.slice(1)
+
+// Turn a build into a concrete dish for the picked protein (glazes and the
+// protein-forward rice bowls); fixed veg/plain dishes pass through untouched.
+const withProtein = (build, protein) => (build.usesProtein ? applyProtein(build, protein) : build)
 
 // Collapse the diet hierarchy to the most specific badge + a GF flag.
 function dietBadges(dish) {
@@ -44,6 +49,13 @@ export default function App() {
   const [batch, setBatch] = useState(1)
   const [pantryOpen, setPantryOpen] = useState(false)
   const [owned, setOwned] = useState(() => new Set(loadOwned() ?? PANTRY_IDS))
+  const [proteinId, setProteinId] = useState(() => {
+    try {
+      return localStorage.getItem(PROTEIN_KEY) || 'salmon'
+    } catch {
+      return 'salmon'
+    }
+  })
   const [timers, setTimers] = useState({})
   const [now, setNow] = useState(() => Date.now())
 
@@ -52,6 +64,8 @@ export default function App() {
   useEffect(() => {
     timersRef.current = timers
   }, [timers])
+
+  const protein = PROTEINS.find((p) => p.id === proteinId) ?? PROTEINS[0]
 
   function unlockAudio() {
     try {
@@ -86,6 +100,14 @@ export default function App() {
   useEffect(() => {
     saveOwned([...owned])
   }, [owned])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PROTEIN_KEY, proteinId)
+    } catch {
+      /* ignore */
+    }
+  }, [proteinId])
 
   // Single heartbeat: advance the clock and settle finished timers.
   useEffect(() => {
@@ -133,7 +155,11 @@ export default function App() {
     }
   }, [anyRunning])
 
-  const modeDishes = mode === 'air-fryer' ? GLAZE : RICE
+  const modeBuilds = mode === 'air-fryer' ? GLAZE : RICE
+  const modeDishes = useMemo(
+    () => modeBuilds.map((b) => withProtein(b, protein)),
+    [modeBuilds, protein],
+  )
   const lanes = useMemo(() => ['all', ...new Set(modeDishes.map((d) => d.lane))], [modeDishes])
   const visible = useMemo(() => {
     let list = filterDishes(modeDishes, { lane, hideLocked, owned, pantry: PANTRY_IDS })
@@ -177,8 +203,8 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <h1>Salmon Lab</h1>
-          <p>Glaze it. Steam it. Eat.</p>
+          <h1>Glaze Lab</h1>
+          <p>Pick a protein. Glaze it. Rice it.</p>
         </div>
         <button
           className="pantry-btn"
@@ -191,6 +217,20 @@ export default function App() {
           </span>
         </button>
       </header>
+
+      <div className="proteins" aria-label="Protein">
+        <span className="ctl-label">Protein</span>
+        {PROTEINS.map((p) => (
+          <button
+            key={p.id}
+            className={`protein-chip ${proteinId === p.id ? 'active' : ''} ${owned.has(p.id) ? '' : 'out'}`}
+            aria-pressed={proteinId === p.id}
+            onClick={() => setProteinId(p.id)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
 
       <div className="modes" role="tablist" aria-label="Cooking mode">
         {[
@@ -377,7 +417,6 @@ function CookTimer({ timer, now, onStart, onPause, onReset }) {
 function PantryDrawer({ owned, onToggle, onAll, onClose }) {
   const ref = useRef(null)
 
-  // Focus management + Escape + a simple focus trap for the dialog.
   useEffect(() => {
     const node = ref.current
     const prev = document.activeElement
@@ -414,8 +453,8 @@ function PantryDrawer({ owned, onToggle, onAll, onClose }) {
     }
   }, [onClose])
 
-  const impact = missingImpact(ALL_DISHES, owned, PANTRY_IDS).slice(0, 4)
-  const list = shoppingList(ALL_DISHES, owned, PANTRY_IDS)
+  const impact = missingImpact([...GLAZE, ...RICE], owned, PANTRY_IDS).slice(0, 4)
+  const list = shoppingList([...GLAZE, ...RICE], owned, PANTRY_IDS)
 
   const copyList = () => {
     const text = list.map((x) => labelFor(x.item)).join('\n')

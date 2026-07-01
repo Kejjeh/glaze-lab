@@ -1,5 +1,5 @@
 // Pantry persistence to localStorage (or any injected getItem/setItem store).
-export const STORAGE_KEY = 'salmonlab.pantry.v1'
+export const STORAGE_KEY = 'glazelab.pantry.v1'
 
 const defaultStore = () => (typeof localStorage !== 'undefined' ? localStorage : null)
 

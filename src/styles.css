@@ -73,6 +73,39 @@ body {
   color: var(--muted);
 }
 
+/* ---- protein picker ---- */
+.proteins {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.protein-chip {
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.protein-chip.active {
+  background: var(--coral);
+  border-color: var(--coral);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+.protein-chip.out {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+.protein-chip.active.out {
+  opacity: 1;
+  text-decoration: none;
+}
+
 /* ---- mode toggle ---- */
 .modes {
   display: flex;

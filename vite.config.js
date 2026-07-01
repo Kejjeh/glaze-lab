@@ -2,20 +2,20 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// base: GitHub Pages serves the project at /<repo>/. Default repo name is
-// "salmon-lab". For a root-served host (Vercel/Netlify/Cloudflare), set '/'.
+// base: GitHub Pages serves the project at /<repo>/. Repo name is
+// "glaze-lab". For a root-served host (Vercel/Netlify/Cloudflare), set '/'.
 export default defineConfig({
-  base: '/salmon-lab/',
+  base: '/glaze-lab/',
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Salmon Lab',
-        short_name: 'Salmon Lab',
+        name: 'Glaze Lab',
+        short_name: 'Glaze Lab',
         description:
-          'Air-fryer salmon glaze builds & rice-cooker dishes with a shared pantry, batch scaling, and cook timers.',
+          'Multi-protein air-fryer glaze builds & rice-cooker bowls with a shared pantry, batch scaling, and cook timers.',
         theme_color: '#EF5238',
         background_color: '#FFF3EC',
         display: 'standalone',

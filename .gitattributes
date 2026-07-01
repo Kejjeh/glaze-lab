@@ -1,0 +1,10 @@
+# Treat binary assets as binary — no end-of-line normalization.
+*.woff2 binary
+*.woff binary
+*.ttf binary
+*.otf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
