@@ -307,6 +307,13 @@ export default function App() {
         ))}
       </div>
 
+      {mode === 'air-fryer' && (
+        <p className="tip">
+          Times are starting points for a 5.8-qt basket — cook to the internal temp with a
+          thermometer, since air-fryer set temps drift.
+        </p>
+      )}
+
       <main className="grid">
         {visible.map((dish) => (
           <DishCard
@@ -389,6 +396,13 @@ function DishCard({ dish, owned, batch, timer, now, onStart, onPause, onReset })
           ))}
         </ol>
       </details>
+
+      {dish.tempF && (
+        <div className="cookmeta">
+          <span className="temp">{dish.tempF}°F</span>
+          <span className="internal">internal {dish.doneness}</span>
+        </div>
+      )}
 
       {timer && (
         <CookTimer timer={timer} now={now} onStart={onStart} onPause={onPause} onReset={onReset} />

@@ -69,10 +69,14 @@ describe('proteins', () => {
     expect(PROTEINS.some((p) => p.id === 'salmon')).toBe(true)
   })
 
-  it('makes every protein a real pantry item with a positive air-fryer cook time', () => {
+  it('makes every protein a real pantry item with researched air-fryer cook data', () => {
     for (const p of PROTEINS) {
       expect(pantryIds.has(p.id), `${p.id} not in pantry`).toBe(true)
       expect(Number.isInteger(p.cookSeconds) && p.cookSeconds > 0, `${p.id} cookSeconds`).toBe(true)
+      expect(Number.isInteger(p.tempF) && p.tempF >= 180 && p.tempF <= 400, `${p.id} tempF`).toBe(
+        true,
+      )
+      expect(typeof p.doneness === 'string' && p.doneness.length > 0, `${p.id} doneness`).toBe(true)
       expect(typeof p.amount, `${p.id} amount`).toBe('number')
       expect(typeof p.unit, `${p.id} unit`).toBe('string')
     }

@@ -13,12 +13,56 @@
 
 export const STAPLES = new Set(['salt', 'pepper', 'water', 'oil', 'sugar', 'butter', 'egg'])
 
+// Air-fryer temp/time/doneness per protein, from the appliance research
+// (Innsky 5.8-qt basket; USDA safe internal temps). Times are starting points —
+// the app tells you to verify internal temp with a thermometer, because set
+// temps drift. Doneness is the target internal temperature.
 export const PROTEINS = [
-  { id: 'salmon', label: 'Salmon', amount: 2, unit: 'fillets', cookSeconds: 540 },
-  { id: 'chickenthigh', label: 'Chicken thigh', amount: 2, unit: 'thighs', cookSeconds: 1020 },
-  { id: 'chickenbreast', label: 'Chicken breast', amount: 1, unit: 'breast', cookSeconds: 840 },
-  { id: 'shrimp', label: 'Shrimp', amount: 200, unit: 'g', cookSeconds: 480 },
-  { id: 'tofu', label: 'Firm tofu', amount: 200, unit: 'g', cookSeconds: 900 },
+  {
+    id: 'salmon',
+    label: 'Salmon',
+    amount: 2,
+    unit: 'fillets',
+    tempF: 400,
+    cookSeconds: 480,
+    doneness: '125–130°F (medium); 145°F well',
+  },
+  {
+    id: 'chickenthigh',
+    label: 'Chicken thigh',
+    amount: 2,
+    unit: 'thighs',
+    tempF: 380,
+    cookSeconds: 1440,
+    doneness: '165°F min; 175–185°F best',
+  },
+  {
+    id: 'chickenbreast',
+    label: 'Chicken breast',
+    amount: 1,
+    unit: 'breast',
+    tempF: 375,
+    cookSeconds: 960,
+    doneness: '165°F (pull at 160°F)',
+  },
+  {
+    id: 'shrimp',
+    label: 'Shrimp',
+    amount: 200,
+    unit: 'g',
+    tempF: 400,
+    cookSeconds: 360,
+    doneness: 'opaque & pearly',
+  },
+  {
+    id: 'tofu',
+    label: 'Firm tofu',
+    amount: 200,
+    unit: 'g',
+    tempF: 375,
+    cookSeconds: 1080,
+    doneness: 'golden & crisp',
+  },
 ]
 
 export const PANTRY = [
@@ -93,7 +137,7 @@ export const GLAZE = [
     steps: [
       'Pat the protein dry and season lightly with salt.',
       'Whisk miso, maple, mirin and soy into a glaze.',
-      'Brush half over the protein and air-fry at 400°F — use the timer.',
+      'Brush half over the protein and air-fry at the shown temp — use the timer.',
       'Brush with the rest and rest 2 minutes before serving.',
     ],
   },
@@ -112,7 +156,7 @@ export const GLAZE = [
     ],
     steps: [
       'Mince garlic and whisk with honey, sriracha and soy.',
-      'Coat the protein and air-fry at 400°F — use the timer.',
+      'Coat the protein and air-fry at the shown temp — use the timer.',
       'Spoon over pan glaze and finish under a minute of high heat.',
     ],
   },
@@ -131,7 +175,7 @@ export const GLAZE = [
     ],
     steps: [
       'Whisk gochujang, honey, lime juice and sesame oil.',
-      'Glaze the protein and air-fry at 400°F — use the timer.',
+      'Glaze the protein and air-fry at the shown temp — use the timer.',
       'Zest lime over the top before serving.',
     ],
   },
@@ -150,7 +194,7 @@ export const GLAZE = [
     ],
     steps: [
       'Simmer soy, mirin, brown sugar and grated ginger 2 minutes to thicken.',
-      'Brush the protein and air-fry at 400°F — use the timer.',
+      'Brush the protein and air-fry at the shown temp — use the timer.',
       'Finish with the reduced teriyaki.',
     ],
   },
@@ -168,7 +212,7 @@ export const GLAZE = [
     ],
     steps: [
       'Whisk Dijon, maple and lemon juice.',
-      'Coat the protein and air-fry at 400°F until glossy — use the timer.',
+      'Coat the protein and air-fry at the shown temp until glossy — use the timer.',
     ],
   },
   {
@@ -186,7 +230,7 @@ export const GLAZE = [
     ],
     steps: [
       'Reduce orange juice with soy, honey and ginger until syrupy.',
-      'Glaze the protein and air-fry at 400°F — use the timer.',
+      'Glaze the protein and air-fry at the shown temp — use the timer.',
       'Brush again and add a little zest.',
     ],
   },
@@ -205,7 +249,7 @@ export const GLAZE = [
     ],
     steps: [
       'Melt butter with minced garlic, lemon juice and Dijon.',
-      'Spoon over the protein and air-fry at 400°F — use the timer.',
+      'Spoon over the protein and air-fry at the shown temp — use the timer.',
       'Baste with pan butter before serving.',
     ],
   },
@@ -224,7 +268,7 @@ export const GLAZE = [
     ],
     steps: [
       'Whisk miso and mirin; brush over the protein.',
-      'Air-fry at 400°F — use the timer.',
+      'Air-fry at the shown temp — use the timer.',
       'Shower with furikake and sesame; 1 more minute to set.',
     ],
   },
@@ -243,7 +287,7 @@ export const GLAZE = [
     ],
     steps: [
       'Mix harissa, honey, lemon and minced garlic.',
-      'Coat the protein and air-fry at 400°F — use the timer.',
+      'Coat the protein and air-fry at the shown temp — use the timer.',
     ],
   },
   {
@@ -262,7 +306,7 @@ export const GLAZE = [
     ],
     steps: [
       'Whisk soy, sesame oil and rice vinegar.',
-      'Glaze the protein and air-fry at 400°F — use the timer.',
+      'Glaze the protein and air-fry at the shown temp — use the timer.',
       'Top with sliced scallion and toasted sesame.',
     ],
   },

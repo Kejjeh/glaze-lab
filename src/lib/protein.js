@@ -5,10 +5,14 @@
 // free, because the protein is now just another ingredient.
 export function applyProtein(build, protein) {
   const proteinIngredient = { item: protein.id, amount: protein.amount, unit: protein.unit }
-  const cookSeconds = build.mode === 'air-fryer' ? protein.cookSeconds : build.cookSeconds
+  const airFryer = build.mode === 'air-fryer'
   return {
     ...build,
-    cookSeconds,
+    // Air-fryer cook temp/time/doneness come from the protein (researched per
+    // protein); rice-cooker builds keep whatever they defined.
+    cookSeconds: airFryer ? protein.cookSeconds : build.cookSeconds,
+    tempF: airFryer ? protein.tempF : build.tempF,
+    doneness: airFryer ? protein.doneness : build.doneness,
     ingredients: [proteinIngredient, ...build.ingredients],
   }
 }

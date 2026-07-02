@@ -10,8 +10,22 @@ const build = {
   ingredients: [{ item: 'miso', amount: 2, unit: 'tbsp' }],
   steps: ['Glaze and cook.'],
 }
-const salmon = { id: 'salmon', amount: 2, unit: 'fillets', cookSeconds: 540 }
-const chicken = { id: 'chickenthigh', amount: 2, unit: 'thighs', cookSeconds: 1020 }
+const salmon = {
+  id: 'salmon',
+  amount: 2,
+  unit: 'fillets',
+  cookSeconds: 540,
+  tempF: 400,
+  doneness: '125–130°F',
+}
+const chicken = {
+  id: 'chickenthigh',
+  amount: 2,
+  unit: 'thighs',
+  cookSeconds: 1020,
+  tempF: 380,
+  doneness: '175°F',
+}
 
 describe('applyProtein', () => {
   it('prepends the chosen protein as the first ingredient', () => {
@@ -32,8 +46,17 @@ describe('applyProtein', () => {
     expect(dish.steps).toEqual(build.steps)
   })
 
-  it('does not give rice-cooker builds a cook timer', () => {
+  it('carries the air-fryer temperature and doneness target onto the dish', () => {
+    const dish = applyProtein(build, chicken)
+    expect(dish.tempF).toBe(380)
+    expect(dish.doneness).toBe('175°F')
+  })
+
+  it('does not give rice-cooker builds a cook timer, temp, or doneness', () => {
     const riceBuild = { ...build, mode: 'rice-cooker', cookSeconds: undefined }
-    expect(applyProtein(riceBuild, salmon).cookSeconds).toBeUndefined()
+    const dish = applyProtein(riceBuild, salmon)
+    expect(dish.cookSeconds).toBeUndefined()
+    expect(dish.tempF).toBeUndefined()
+    expect(dish.doneness).toBeUndefined()
   })
 })

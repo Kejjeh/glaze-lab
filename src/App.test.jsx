@@ -95,14 +95,18 @@ describe('Glaze Lab app', () => {
 
   // ---- protein axis ----
 
-  it('injects the chosen protein and its cook time into a glaze build', () => {
+  it('injects the protein plus its researched temp, time and target internal', () => {
     render(<App />)
     const card = () => cardOf(/Miso.+Maple Glaze/)
     expect(card().textContent).toContain('Salmon') // default protein
-    expect(card().textContent).toContain('9:00') // salmon = 540s
+    expect(card().textContent).toContain('400°F') // salmon air-fryer temp
+    expect(card().textContent).toContain('8:00') // salmon = 480s
+    expect(card().textContent).toContain('130°F') // salmon target internal
     fireEvent.click(screen.getByRole('button', { name: 'Chicken thigh' }))
     expect(card().textContent).toContain('Chicken thigh')
-    expect(card().textContent).toContain('17:00') // chicken thigh = 1020s
+    expect(card().textContent).toContain('380°F') // chicken thigh temp
+    expect(card().textContent).toContain('24:00') // chicken thigh = 1440s
+    expect(card().textContent).toContain('165°F') // chicken safe internal
   })
 
   it('gates every protein-using dish when the chosen protein is unchecked', () => {
