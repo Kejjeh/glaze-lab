@@ -25,6 +25,7 @@ const chicken = {
   cookSeconds: 1020,
   tempF: 380,
   doneness: '175°F',
+  tip: 'Skin-side down first',
 }
 
 describe('applyProtein', () => {
@@ -46,10 +47,11 @@ describe('applyProtein', () => {
     expect(dish.steps).toEqual(build.steps)
   })
 
-  it('carries the air-fryer temperature and doneness target onto the dish', () => {
+  it('carries the air-fryer temperature, doneness target and prep tip onto the dish', () => {
     const dish = applyProtein(build, chicken)
     expect(dish.tempF).toBe(380)
     expect(dish.doneness).toBe('175°F')
+    expect(dish.tip).toBe('Skin-side down first')
   })
 
   it('does not give rice-cooker builds a cook timer, temp, or doneness', () => {

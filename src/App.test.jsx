@@ -124,4 +124,22 @@ describe('Glaze Lab app', () => {
     render(<App />)
     expect(cardOf(/Miso.+Maple Glaze/).textContent).toContain('Firm tofu')
   })
+
+  it('shows coordinated meal plans with an ordered timeline in Meals mode', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('tab', { name: /Meals/i }))
+    const card = cardOf('Salmon, Rice & Steamed Broccoli')
+    expect(card.textContent).toContain('start') // first step label
+    expect(card.textContent).toContain('Air-Fryer') // appliance badge
+    expect(card.textContent).toContain('Rice-Cooker')
+    // dish-only controls are hidden in Meals mode
+    expect(screen.queryByRole('searchbox')).toBeNull()
+    expect(screen.queryByText('Protein')).toBeNull()
+  })
+
+  it('offers beef and pork on the protein picker', () => {
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Steak' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Pork chop' })).toBeTruthy()
+  })
 })

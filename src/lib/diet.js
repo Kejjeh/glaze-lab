@@ -2,7 +2,17 @@
 // of sync with the recipe. Classification is intentionally conservative:
 // "gluten-free" only when no typically-gluten-containing ingredient is present.
 
-const MEAT = new Set(['chicken', 'chickenthigh', 'chickenbreast'])
+const MEAT = new Set([
+  'chicken',
+  'chickenthigh',
+  'chickenbreast',
+  'beef',
+  'steak',
+  'pork',
+  'porkchop',
+  'porktenderloin',
+  'stock', // chicken stock — not vegetarian/pescatarian
+])
 const FISH = new Set(['salmon', 'shrimp'])
 const DAIRY = new Set(['butter'])
 const EGG = new Set(['egg'])

@@ -24,6 +24,15 @@ describe('dietTags (derived from ingredients)', () => {
   it('never tags a chicken dish pescatarian/vegetarian/vegan', () => {
     expect(dietTags(dish('chickenthigh', 'stock'))).toEqual(['gluten-free'])
   })
+
+  it('treats chicken stock as meat, not vegetarian', () => {
+    expect(dietTags(dish('rice', 'stock', 'spinach'))).toEqual(['gluten-free'])
+  })
+
+  it('tags beef and pork dishes as meat only', () => {
+    expect(dietTags(dish('steak', 'garlic'))).toEqual(['gluten-free'])
+    expect(dietTags(dish('porkchop', 'soy'))).toEqual([]) // soy → not gluten-free
+  })
 })
 
 describe('matchesDiet', () => {

@@ -427,6 +427,12 @@ body {
 .cookmeta .internal {
   color: var(--muted);
 }
+.preptip {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.35;
+}
 
 .timer {
   display: flex;
@@ -477,6 +483,66 @@ body {
   grid-column: 1 / -1;
   text-align: center;
   padding: 40px;
+}
+
+/* ---- meal timeline ---- */
+.meal-total {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.timeline {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tl-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'clock app' 'text text';
+  gap: 4px 8px;
+  align-items: center;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+.tl-clock {
+  grid-area: clock;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--coral-deep);
+  white-space: nowrap;
+}
+.tl-app {
+  grid-area: app;
+  justify-self: start;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.tl-app.air-fryer {
+  background: #ffe6da;
+  color: var(--coral-deep);
+}
+.tl-app.rice-cooker {
+  background: #eaf6ee;
+  color: #227a45;
+}
+.tl-app.prep {
+  background: #eeeae7;
+  color: #7a6a60;
+}
+.tl-text {
+  grid-area: text;
+  font-size: 13.5px;
+  color: var(--ink);
+  line-height: 1.35;
 }
 
 /* ---- pantry drawer ---- */

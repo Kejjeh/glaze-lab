@@ -18,6 +18,7 @@ export const STAPLES = new Set(['salt', 'pepper', 'water', 'oil', 'sugar', 'butt
 // the app tells you to verify internal temp with a thermometer, because set
 // temps drift. Doneness is the target internal temperature.
 export const PROTEINS = [
+  // fmt: id, label, amount/unit, air-fryer tempF, cookSeconds, target internal, prep tip
   {
     id: 'salmon',
     label: 'Salmon',
@@ -26,6 +27,7 @@ export const PROTEINS = [
     tempF: 400,
     cookSeconds: 480,
     doneness: '125–130°F (medium); 145°F well',
+    tip: 'Pat dry; skin-side down; no foil; single layer',
   },
   {
     id: 'chickenthigh',
@@ -35,6 +37,7 @@ export const PROTEINS = [
     tempF: 380,
     cookSeconds: 1440,
     doneness: '165°F min; 175–185°F best',
+    tip: 'Skin-side down first; pat dry',
   },
   {
     id: 'chickenbreast',
@@ -44,6 +47,7 @@ export const PROTEINS = [
     tempF: 375,
     cookSeconds: 960,
     doneness: '165°F (pull at 160°F)',
+    tip: 'Brine 30 min; pat dry; even thickness',
   },
   {
     id: 'shrimp',
@@ -53,6 +57,7 @@ export const PROTEINS = [
     tempF: 400,
     cookSeconds: 360,
     doneness: 'opaque & pearly',
+    tip: 'Large/jumbo best; single layer; do not overcook',
   },
   {
     id: 'tofu',
@@ -62,6 +67,37 @@ export const PROTEINS = [
     tempF: 375,
     cookSeconds: 1080,
     doneness: 'golden & crisp',
+    tip: 'Press 15 min; ¾-inch cubes; cornstarch for crunch',
+  },
+  {
+    id: 'steak',
+    label: 'Steak',
+    amount: 2,
+    unit: 'steaks',
+    tempF: 400,
+    cookSeconds: 480,
+    doneness: '130–135°F med-rare; 145°F USDA',
+    tip: 'Pat dry; flip once; rest 5 min',
+  },
+  {
+    id: 'porkchop',
+    label: 'Pork chop',
+    amount: 2,
+    unit: 'chops',
+    tempF: 400,
+    cookSeconds: 780,
+    doneness: '145°F + 3-min rest',
+    tip: 'Pat dry; flip halfway; rest 3 min',
+  },
+  {
+    id: 'porktenderloin',
+    label: 'Pork tenderloin',
+    amount: 1,
+    unit: 'tenderloin',
+    tempF: 400,
+    cookSeconds: 1200,
+    doneness: '145°F + rest',
+    tip: 'Turn halfway; rest before slicing',
   },
 ]
 
@@ -105,6 +141,9 @@ export const PANTRY = [
   { id: 'salmon', label: 'Salmon', group: 'Protein' },
   { id: 'chickenthigh', label: 'Chicken thigh', group: 'Protein' },
   { id: 'chickenbreast', label: 'Chicken breast', group: 'Protein' },
+  { id: 'steak', label: 'Steak', group: 'Protein' },
+  { id: 'porkchop', label: 'Pork chop', group: 'Protein' },
+  { id: 'porktenderloin', label: 'Pork tenderloin', group: 'Protein' },
   { id: 'shrimp', label: 'Shrimp', group: 'Protein' },
   { id: 'tofu', label: 'Firm tofu', group: 'Protein' },
   { id: 'chickpea', label: 'Chickpeas', group: 'Protein' },
@@ -112,6 +151,9 @@ export const PANTRY = [
   // Grain & finish
   { id: 'rice', label: 'Short-grain rice', group: 'Grain' },
   { id: 'jasmine', label: 'Jasmine rice', group: 'Grain' },
+  { id: 'quinoa', label: 'Quinoa', group: 'Grain' },
+  { id: 'farro', label: 'Farro', group: 'Grain' },
+  { id: 'oats', label: 'Steel-cut oats', group: 'Grain' },
   { id: 'stock', label: 'Chicken stock', group: 'Grain' },
   { id: 'furikake', label: 'Furikake', group: 'Finish' },
   { id: 'sesameseed', label: 'Sesame seeds', group: 'Finish' },
@@ -313,13 +355,17 @@ export const GLAZE = [
 ]
 
 // rice-cooker builder. `usesProtein` bowls get the picked protein at render.
-const rice = (id, name, lane, blurb, ingredients, steps, usesProtein = false) => ({
+// `extra` can set the COSORI function (`cooker`) and a `setup` note (ratio·time);
+// defaults to the White Rice program, which suits rice/jasmine dishes.
+const rice = (id, name, lane, blurb, ingredients, steps, usesProtein = false, extra = {}) => ({
   id,
   name,
   mode: 'rice-cooker',
   lane,
   blurb,
   usesProtein,
+  cooker: extra.cooker ?? 'White Rice',
+  setup: extra.setup,
   ingredients,
   steps,
 })
@@ -710,5 +756,53 @@ export const RICE = [
       { item: 'soy', amount: 1, unit: 'tsp' },
     ],
     ['Cook rice.', 'Warm ginger and scallion in sesame oil; fold through with soy.'],
+  ),
+  // Grains — showcase the COSORI Grains/Oatmeal programs (official ratios)
+  rice(
+    'r-quinoa-bowl',
+    'Lemon Quinoa Bowl',
+    'Grains',
+    'Fluffy quinoa brightened with lemon and scallion.',
+    [
+      { item: 'quinoa', amount: 1, unit: 'cup' },
+      { item: 'water', amount: 1.25, unit: 'cups' },
+      { item: 'lemon', amount: 0.5, unit: 'each' },
+      { item: 'scallion', amount: 1, unit: 'stalk' },
+    ],
+    [
+      'Rinse quinoa to remove saponin.',
+      'Run the Grains → Quinoa program; fold in lemon and scallion.',
+    ],
+    false,
+    { cooker: 'Grains', setup: '1:1¼ · 37–47 min' },
+  ),
+  rice(
+    'r-farro-mushroom',
+    'Mushroom Farro',
+    'Grains',
+    'Chewy farro with shiitake and garlic — a hearty base.',
+    [
+      { item: 'farro', amount: 1, unit: 'cup' },
+      { item: 'stock', amount: 1.25, unit: 'cups' },
+      { item: 'mushroom', amount: 100, unit: 'g' },
+      { item: 'garlic', amount: 1, unit: 'clove' },
+    ],
+    ['Add farro, stock, sliced shiitake and garlic.', 'Run the Grains → Farro program; fluff.'],
+    false,
+    { cooker: 'Grains', setup: '1:1¼ · 65–75 min' },
+  ),
+  rice(
+    'r-maple-oats',
+    'Maple Steel-Cut Oats',
+    'Grains',
+    'Creamy steel-cut oats with a swirl of maple.',
+    [
+      { item: 'oats', amount: 1, unit: 'cup' },
+      { item: 'water', amount: 3, unit: 'cups' },
+      { item: 'maple', amount: 1, unit: 'tbsp' },
+    ],
+    ['Add oats and water.', 'Run the Oatmeal program; stir in maple to finish.'],
+    false,
+    { cooker: 'Oatmeal', setup: '1:3 · 35–45 min' },
   ),
 ]

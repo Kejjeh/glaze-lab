@@ -13,6 +13,7 @@ export function applyProtein(build, protein) {
     cookSeconds: airFryer ? protein.cookSeconds : build.cookSeconds,
     tempF: airFryer ? protein.tempF : build.tempF,
     doneness: airFryer ? protein.doneness : build.doneness,
+    tip: airFryer ? protein.tip : build.tip,
     ingredients: [proteinIngredient, ...build.ingredients],
   }
 }

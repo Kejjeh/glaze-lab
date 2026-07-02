@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { PANTRY, STAPLES, GLAZE, RICE, PROTEINS } from './data/recipes.js'
+import { MEALS } from './data/meals.js'
 import { missingIngredients } from './lib/pantry.js'
 import { applyProtein } from './lib/protein.js'
+import { orderedSteps, elapsedLabel } from './lib/meals.js'
 import { filterDishes } from './lib/filters.js'
 import { searchDishes } from './lib/search.js'
 import { dietTags, matchesDiet } from './lib/diet.js'
@@ -22,6 +24,7 @@ const DIET_SHORT = {
   'gluten-free': 'GF',
 }
 const PROTEIN_KEY = 'glazelab.protein.v1'
+const APPLIANCE_LABEL = { 'air-fryer': 'Air-Fryer', 'rice-cooker': 'Rice-Cooker', prep: 'Prep' }
 
 const labelFor = (item) => LABELS[item] ?? item.charAt(0).toUpperCase() + item.slice(1)
 
@@ -218,24 +221,27 @@ export default function App() {
         </button>
       </header>
 
-      <div className="proteins" aria-label="Protein">
-        <span className="ctl-label">Protein</span>
-        {PROTEINS.map((p) => (
-          <button
-            key={p.id}
-            className={`protein-chip ${proteinId === p.id ? 'active' : ''} ${owned.has(p.id) ? '' : 'out'}`}
-            aria-pressed={proteinId === p.id}
-            onClick={() => setProteinId(p.id)}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      {mode !== 'meals' && (
+        <div className="proteins" aria-label="Protein">
+          <span className="ctl-label">Protein</span>
+          {PROTEINS.map((p) => (
+            <button
+              key={p.id}
+              className={`protein-chip ${proteinId === p.id ? 'active' : ''} ${owned.has(p.id) ? '' : 'out'}`}
+              aria-pressed={proteinId === p.id}
+              onClick={() => setProteinId(p.id)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="modes" role="tablist" aria-label="Cooking mode">
         {[
           ['air-fryer', 'Air-Fryer', GLAZE.length],
           ['rice-cooker', 'Rice-Cooker', RICE.length],
+          ['meals', 'Meals', MEALS.length],
         ].map(([id, label, n]) => (
           <button
             key={id}
@@ -249,63 +255,67 @@ export default function App() {
         ))}
       </div>
 
-      <div className="controls">
-        <div className="batch" aria-label="Batch size">
-          <span className="ctl-label">Batch</span>
-          {BATCHES.map((b) => (
-            <button
-              key={b}
-              className={`batch-chip ${batch === b ? 'active' : ''}`}
-              onClick={() => setBatch(b)}
-            >
-              {b === 0.5 ? '½×' : `${b}×`}
-            </button>
-          ))}
-        </div>
+      {mode !== 'meals' && (
+        <>
+          <div className="controls">
+            <div className="batch" aria-label="Batch size">
+              <span className="ctl-label">Batch</span>
+              {BATCHES.map((b) => (
+                <button
+                  key={b}
+                  className={`batch-chip ${batch === b ? 'active' : ''}`}
+                  onClick={() => setBatch(b)}
+                >
+                  {b === 0.5 ? '½×' : `${b}×`}
+                </button>
+              ))}
+            </div>
 
-        <div className="search">
-          <input
-            type="search"
-            placeholder="Search dishes or ingredients…"
-            aria-label="Search dishes"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
+            <div className="search">
+              <input
+                type="search"
+                placeholder="Search dishes or ingredients…"
+                aria-label="Search dishes"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
 
-        <label className="hide-locked">
-          <input
-            type="checkbox"
-            checked={hideLocked}
-            onChange={(e) => setHideLocked(e.target.checked)}
-          />
-          Hide locked
-        </label>
-      </div>
+            <label className="hide-locked">
+              <input
+                type="checkbox"
+                checked={hideLocked}
+                onChange={(e) => setHideLocked(e.target.checked)}
+              />
+              Hide locked
+            </label>
+          </div>
 
-      <div className="lanes" aria-label="Lane filter">
-        {lanes.map((l) => (
-          <button
-            key={l}
-            className={`lane-chip ${lane === l ? 'active' : ''}`}
-            onClick={() => setLane(l)}
-          >
-            {l === 'all' ? 'All' : l}
-          </button>
-        ))}
-      </div>
+          <div className="lanes" aria-label="Lane filter">
+            {lanes.map((l) => (
+              <button
+                key={l}
+                className={`lane-chip ${lane === l ? 'active' : ''}`}
+                onClick={() => setLane(l)}
+              >
+                {l === 'all' ? 'All' : l}
+              </button>
+            ))}
+          </div>
 
-      <div className="diets" aria-label="Dietary filter">
-        {DIETS.map((d) => (
-          <button
-            key={d}
-            className={`diet-chip ${diet === d ? 'active' : ''}`}
-            onClick={() => setDiet(d)}
-          >
-            {d === 'all' ? 'Any diet' : (DIET_SHORT[d] ?? d)}
-          </button>
-        ))}
-      </div>
+          <div className="diets" aria-label="Dietary filter">
+            {DIETS.map((d) => (
+              <button
+                key={d}
+                className={`diet-chip ${diet === d ? 'active' : ''}`}
+                onClick={() => setDiet(d)}
+              >
+                {d === 'all' ? 'Any diet' : (DIET_SHORT[d] ?? d)}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {mode === 'air-fryer' && (
         <p className="tip">
@@ -313,22 +323,30 @@ export default function App() {
           thermometer, since air-fryer set temps drift.
         </p>
       )}
+      {mode === 'rice-cooker' && (
+        <p className="tip">
+          COSORI: rinse grains until clear, use 1:1¼ water for rice/quinoa/farro (oatmeal 1:3), and
+          rest 5 min before fluffing.
+        </p>
+      )}
 
       <main className="grid">
-        {visible.map((dish) => (
-          <DishCard
-            key={dish.id}
-            dish={dish}
-            owned={owned}
-            batch={batch}
-            timer={dish.mode === 'air-fryer' ? timerFor(dish) : null}
-            now={now}
-            onStart={() => startTimer(dish)}
-            onPause={() => pauseTimer(dish)}
-            onReset={() => resetTimer(dish)}
-          />
-        ))}
-        {visible.length === 0 && (
+        {mode === 'meals'
+          ? MEALS.map((meal) => <MealCard key={meal.id} meal={meal} />)
+          : visible.map((dish) => (
+              <DishCard
+                key={dish.id}
+                dish={dish}
+                owned={owned}
+                batch={batch}
+                timer={dish.mode === 'air-fryer' ? timerFor(dish) : null}
+                now={now}
+                onStart={() => startTimer(dish)}
+                onPause={() => pauseTimer(dish)}
+                onReset={() => resetTimer(dish)}
+              />
+            ))}
+        {mode !== 'meals' && visible.length === 0 && (
           <p className="empty">No dishes match — try clearing the search or another filter.</p>
         )}
       </main>
@@ -403,6 +421,14 @@ function DishCard({ dish, owned, batch, timer, now, onStart, onPause, onReset })
           <span className="internal">internal {dish.doneness}</span>
         </div>
       )}
+      {dish.tip && <p className="preptip">💡 {dish.tip}</p>}
+
+      {dish.cooker && (
+        <div className="cookmeta">
+          <span className="temp">{dish.cooker}</span>
+          {dish.setup && <span className="internal">{dish.setup}</span>}
+        </div>
+      )}
 
       {timer && (
         <CookTimer timer={timer} now={now} onStart={onStart} onPause={onPause} onReset={onReset} />
@@ -425,6 +451,28 @@ function CookTimer({ timer, now, onStart, onPause, onReset }) {
       </div>
       {timer.done && <span className="ding">✓ done</span>}
     </div>
+  )
+}
+
+function MealCard({ meal }) {
+  return (
+    <article className="card meal-card">
+      <div className="card-head">
+        <span className="lane-tag">{meal.serves}</span>
+        <span className="meal-total">~{elapsedLabel(meal.totalMinutes)}</span>
+      </div>
+      <h3>{meal.name}</h3>
+      <p className="blurb">{meal.blurb}</p>
+      <ol className="timeline">
+        {orderedSteps(meal).map((s, i) => (
+          <li key={i} className="tl-step">
+            <span className="tl-clock">{elapsedLabel(s.atMinute)}</span>
+            <span className={`tl-app ${s.appliance}`}>{APPLIANCE_LABEL[s.appliance]}</span>
+            <span className="tl-text">{s.text}</span>
+          </li>
+        ))}
+      </ol>
+    </article>
   )
 }
 

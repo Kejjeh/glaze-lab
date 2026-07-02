@@ -6,9 +6,15 @@ const allowed = new Set([...pantryIds, ...STAPLES])
 const dishes = [...GLAZE, ...RICE]
 
 describe('recipe data integrity', () => {
-  it('has 10 air-fryer glaze builds and 24 rice-cooker dishes', () => {
+  it('has 10 air-fryer glaze builds and 27 rice-cooker dishes', () => {
     expect(GLAZE).toHaveLength(10)
-    expect(RICE).toHaveLength(24)
+    expect(RICE).toHaveLength(27)
+  })
+
+  it('gives every rice-cooker dish a COSORI function (cooker)', () => {
+    for (const d of RICE) {
+      expect(typeof d.cooker === 'string' && d.cooker.length > 0, `${d.id} cooker`).toBe(true)
+    }
   })
 
   it('gives every dish a unique id', () => {
@@ -77,6 +83,7 @@ describe('proteins', () => {
         true,
       )
       expect(typeof p.doneness === 'string' && p.doneness.length > 0, `${p.id} doneness`).toBe(true)
+      expect(typeof p.tip === 'string' && p.tip.length > 0, `${p.id} tip`).toBe(true)
       expect(typeof p.amount, `${p.id} amount`).toBe('number')
       expect(typeof p.unit, `${p.id} unit`).toBe('string')
     }
