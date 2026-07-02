@@ -3,6 +3,18 @@
 // ingredient list, and for air-fryer builds the cook time comes from the
 // protein (salmon ≠ chicken thigh). Pantry gating then works on the protein for
 // free, because the protein is now just another ingredient.
+// For proteins with doneness `levels` (steak, salmon), swap in the chosen
+// level's cook time + target internal temp. Falls back to the default level
+// (or the first) for a missing id; a no-op for proteins without levels.
+export function withDoneness(protein, levelId) {
+  if (!protein.levels) return protein
+  const level =
+    protein.levels.find((l) => l.id === levelId) ??
+    protein.levels.find((l) => l.default) ??
+    protein.levels[0]
+  return { ...protein, cookSeconds: level.cookSeconds, doneness: level.doneness }
+}
+
 export function applyProtein(build, protein) {
   const proteinIngredient = { item: protein.id, amount: protein.amount, unit: protein.unit }
   const airFryer = build.mode === 'air-fryer'

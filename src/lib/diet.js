@@ -6,6 +6,7 @@ const MEAT = new Set([
   'chicken',
   'chickenthigh',
   'chickenbreast',
+  'wings',
   'beef',
   'steak',
   'pork',

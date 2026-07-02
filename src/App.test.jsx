@@ -109,6 +109,16 @@ describe('Glaze Lab app', () => {
     expect(card().textContent).toContain('165°F') // chicken safe internal
   })
 
+  it('adjusts cook time and target internal via the doneness control', () => {
+    render(<App />) // default protein = salmon (has doneness levels)
+    const card = () => cardOf(/Miso.+Maple Glaze/)
+    expect(card().textContent).toContain('8:00') // salmon medium
+    expect(card().textContent).toContain('130°F')
+    fireEvent.click(screen.getByRole('button', { name: 'Well' }))
+    expect(card().textContent).toContain('10:00') // salmon well = 600s
+    expect(card().textContent).toContain('145°F')
+  })
+
   it('gates every protein-using dish when the chosen protein is unchecked', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Pantry/i }))
@@ -135,6 +145,16 @@ describe('Glaze Lab app', () => {
     // dish-only controls are hidden in Meals mode
     expect(screen.queryByRole('searchbox')).toBeNull()
     expect(screen.queryByText('Protein')).toBeNull()
+  })
+
+  it('shows air-fryer and steamed sides in Sides mode', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('tab', { name: /Sides/i }))
+    const fries = cardOf('Air-Fryer Fries')
+    expect(fries.textContent).toContain('400°F') // air-fryer side temp
+    expect(fries.textContent).toContain('13:00') // 780s
+    expect(cardOf('Steamed Green Beans').textContent).toContain('Steam') // COSORI function
+    expect(screen.queryByText('Protein')).toBeNull() // picker hidden for sides
   })
 
   it('offers beef and pork on the protein picker', () => {

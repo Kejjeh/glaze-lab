@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { PANTRY, STAPLES, GLAZE, RICE, PROTEINS } from './data/recipes.js'
+import { PANTRY, STAPLES, GLAZE, RICE, SIDES, PROTEINS } from './data/recipes.js'
 import { MEALS } from './data/meals.js'
 import { missingIngredients } from './lib/pantry.js'
-import { applyProtein } from './lib/protein.js'
+import { applyProtein, withDoneness } from './lib/protein.js'
 import { orderedSteps, elapsedLabel } from './lib/meals.js'
 import { filterDishes } from './lib/filters.js'
 import { searchDishes } from './lib/search.js'
@@ -59,6 +59,7 @@ export default function App() {
       return 'salmon'
     }
   })
+  const [donenessId, setDonenessId] = useState(null)
   const [timers, setTimers] = useState({})
   const [now, setNow] = useState(() => Date.now())
 
@@ -158,11 +159,11 @@ export default function App() {
     }
   }, [anyRunning])
 
-  const modeBuilds = mode === 'air-fryer' ? GLAZE : RICE
-  const modeDishes = useMemo(
-    () => modeBuilds.map((b) => withProtein(b, protein)),
-    [modeBuilds, protein],
-  )
+  const modeBuilds = mode === 'air-fryer' ? GLAZE : mode === 'sides' ? SIDES : RICE
+  const modeDishes = useMemo(() => {
+    const effProtein = withDoneness(protein, donenessId)
+    return modeBuilds.map((b) => withProtein(b, effProtein))
+  }, [modeBuilds, protein, donenessId])
   const lanes = useMemo(() => ['all', ...new Set(modeDishes.map((d) => d.lane))], [modeDishes])
   const visible = useMemo(() => {
     let list = filterDishes(modeDishes, { lane, hideLocked, owned, pantry: PANTRY_IDS })
@@ -221,7 +222,7 @@ export default function App() {
         </button>
       </header>
 
-      {mode !== 'meals' && (
+      {(mode === 'air-fryer' || mode === 'rice-cooker') && (
         <div className="proteins" aria-label="Protein">
           <span className="ctl-label">Protein</span>
           {PROTEINS.map((p) => (
@@ -229,7 +230,10 @@ export default function App() {
               key={p.id}
               className={`protein-chip ${proteinId === p.id ? 'active' : ''} ${owned.has(p.id) ? '' : 'out'}`}
               aria-pressed={proteinId === p.id}
-              onClick={() => setProteinId(p.id)}
+              onClick={() => {
+                setProteinId(p.id)
+                setDonenessId(null)
+              }}
             >
               {p.label}
             </button>
@@ -237,10 +241,31 @@ export default function App() {
         </div>
       )}
 
+      {mode === 'air-fryer' && protein.levels && (
+        <div className="doneness" aria-label="Doneness">
+          <span className="ctl-label">Doneness</span>
+          {protein.levels.map((l) => {
+            const activeId =
+              donenessId ?? protein.levels.find((x) => x.default)?.id ?? protein.levels[0].id
+            return (
+              <button
+                key={l.id}
+                className={`done-chip ${activeId === l.id ? 'active' : ''}`}
+                aria-pressed={activeId === l.id}
+                onClick={() => setDonenessId(l.id)}
+              >
+                {l.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       <div className="modes" role="tablist" aria-label="Cooking mode">
         {[
           ['air-fryer', 'Air-Fryer', GLAZE.length],
           ['rice-cooker', 'Rice-Cooker', RICE.length],
+          ['sides', 'Sides', SIDES.length],
           ['meals', 'Meals', MEALS.length],
         ].map(([id, label, n]) => (
           <button
@@ -327,6 +352,12 @@ export default function App() {
         <p className="tip">
           COSORI: rinse grains until clear, use 1:1¼ water for rice/quinoa/farro (oatmeal 1:3), and
           rest 5 min before fluffing.
+        </p>
+      )}
+      {mode === 'sides' && (
+        <p className="tip">
+          Single-layer the basket (fill ≤ ¾) and shake halfway; steamed sides go over the rice at
+          the ~30-min mark.
         </p>
       )}
 

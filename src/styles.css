@@ -106,6 +106,30 @@ body {
   text-decoration: none;
 }
 
+/* ---- doneness ---- */
+.doneness {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.done-chip {
+  font-family: var(--mono);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.done-chip.active {
+  background: var(--ink);
+  color: var(--cream);
+  border-color: var(--ink);
+}
+
 /* ---- mode toggle ---- */
 .modes {
   display: flex;

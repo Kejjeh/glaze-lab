@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { GLAZE, RICE, PANTRY, STAPLES, PROTEINS } from './recipes.js'
+import { GLAZE, RICE, SIDES, PANTRY, STAPLES, PROTEINS } from './recipes.js'
 
 const pantryIds = new Set(PANTRY.map((p) => p.id))
 const allowed = new Set([...pantryIds, ...STAPLES])
-const dishes = [...GLAZE, ...RICE]
+const dishes = [...GLAZE, ...RICE, ...SIDES]
 
 describe('recipe data integrity', () => {
   it('has 10 air-fryer glaze builds and 27 rice-cooker dishes', () => {
@@ -92,5 +92,32 @@ describe('proteins', () => {
   it('has some protein-swappable rice bowls and some fixed veg/plain ones', () => {
     expect(RICE.some((d) => d.usesProtein === true)).toBe(true)
     expect(RICE.some((d) => !d.usesProtein)).toBe(true)
+  })
+})
+
+describe('sides', () => {
+  it('provides several sides across both appliances', () => {
+    expect(SIDES.length).toBeGreaterThanOrEqual(6)
+    const apps = new Set(SIDES.map((s) => s.mode))
+    expect(apps.has('air-fryer')).toBe(true)
+    expect(apps.has('rice-cooker')).toBe(true)
+  })
+
+  it('gives air-fryer sides temp/time/doneness and steamed sides a cooker function', () => {
+    for (const s of SIDES) {
+      if (s.mode === 'air-fryer') {
+        expect(Number.isInteger(s.tempF) && s.tempF > 0, `${s.id} tempF`).toBe(true)
+        expect(Number.isInteger(s.cookSeconds) && s.cookSeconds > 0, `${s.id} cookSeconds`).toBe(
+          true,
+        )
+        expect(typeof s.doneness, `${s.id} doneness`).toBe('string')
+      } else {
+        expect(typeof s.cooker === 'string' && s.cooker.length > 0, `${s.id} cooker`).toBe(true)
+      }
+    }
+  })
+
+  it('never marks a side protein-swappable', () => {
+    expect(SIDES.every((s) => !s.usesProtein)).toBe(true)
   })
 })

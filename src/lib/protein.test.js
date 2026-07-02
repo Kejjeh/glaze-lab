@@ -1,5 +1,19 @@
 import { describe, it, expect } from 'vitest'
-import { applyProtein } from './protein.js'
+import { applyProtein, withDoneness } from './protein.js'
+
+const steak = {
+  id: 'steak',
+  amount: 2,
+  unit: 'steaks',
+  tempF: 400,
+  cookSeconds: 480,
+  doneness: '130–135°F',
+  levels: [
+    { id: 'rare', label: 'Rare', cookSeconds: 420, doneness: '120–125°F rare' },
+    { id: 'medrare', label: 'Med-rare', cookSeconds: 480, doneness: '130–135°F', default: true },
+    { id: 'well', label: 'Well', cookSeconds: 660, doneness: '155°F+ well' },
+  ],
+}
 
 const build = {
   id: 'g-x',
@@ -52,6 +66,22 @@ describe('applyProtein', () => {
     expect(dish.tempF).toBe(380)
     expect(dish.doneness).toBe('175°F')
     expect(dish.tip).toBe('Skin-side down first')
+  })
+
+  it('withDoneness overrides cook time and target for the chosen level', () => {
+    const d = withDoneness(steak, 'well')
+    expect(d.cookSeconds).toBe(660)
+    expect(d.doneness).toBe('155°F+ well')
+  })
+
+  it('withDoneness falls back to the default level for a missing/absent id', () => {
+    expect(withDoneness(steak, null).cookSeconds).toBe(480)
+    expect(withDoneness(steak, 'nope').doneness).toBe('130–135°F')
+  })
+
+  it('withDoneness returns the protein unchanged when it has no levels', () => {
+    const salmon = { id: 'salmon', cookSeconds: 480 }
+    expect(withDoneness(salmon, 'x')).toBe(salmon)
   })
 
   it('does not give rice-cooker builds a cook timer, temp, or doneness', () => {
