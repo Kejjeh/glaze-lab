@@ -4,6 +4,10 @@ import { MEALS } from './data/meals.js'
 import { missingIngredients } from './lib/pantry.js'
 import { applyProtein, withDoneness } from './lib/protein.js'
 import { orderedSteps, elapsedLabel } from './lib/meals.js'
+import { runnerState } from './lib/runner.js'
+import { calibrateSeconds } from './lib/calibrate.js'
+import { encodeState, decodeState } from './lib/urlstate.js'
+import { mealToICS } from './lib/ics.js'
 import { filterDishes } from './lib/filters.js'
 import { searchDishes } from './lib/search.js'
 import { dietTags, matchesDiet } from './lib/diet.js'
@@ -23,16 +27,58 @@ const DIET_SHORT = {
   vegan: 'vegan',
   'gluten-free': 'GF',
 }
-const PROTEIN_KEY = 'glazelab.protein.v1'
 const APPLIANCE_LABEL = { 'air-fryer': 'Air-Fryer', 'rice-cooker': 'Rice-Cooker', prep: 'Prep' }
+const PROTEIN_KEY = 'glazelab.protein.v1'
+const CALIB_KEY = 'glazelab.calib.v1'
+const FAVS_KEY = 'glazelab.favs.v1'
+const CUSTOM_KEY = 'glazelab.custom.v1'
+const CALIB_OPTIONS = [
+  { pct: -15, label: 'Runs hot' },
+  { pct: -8, label: '−8%' },
+  { pct: 0, label: 'Normal' },
+  { pct: 8, label: '+8%' },
+  { pct: 15, label: 'Runs cold' },
+]
+// pantry groups a custom glaze can draw from
+const GLAZE_ITEM_GROUPS = new Set(['Glaze & Sauce', 'Aromatics', 'Citrus', 'Finish'])
 
 const labelFor = (item) => LABELS[item] ?? item.charAt(0).toUpperCase() + item.slice(1)
-
-// Turn a build into a concrete dish for the picked protein (glazes and the
-// protein-forward rice bowls); fixed veg/plain dishes pass through untouched.
 const withProtein = (build, protein) => (build.usesProtein ? applyProtein(build, protein) : build)
 
-// Collapse the diet hierarchy to the most specific badge + a GF flag.
+const readJSON = (key, fallback) => {
+  try {
+    const v = localStorage.getItem(key)
+    return v ? JSON.parse(v) : fallback
+  } catch {
+    return fallback
+  }
+}
+const readNum = (key, fallback) => {
+  try {
+    const v = localStorage.getItem(key)
+    return v != null ? Number(v) : fallback
+  } catch {
+    return fallback
+  }
+}
+const writeKey = (key, value) => {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    /* ignore */
+  }
+}
+
+function notify(body) {
+  try {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Glaze Lab', { body })
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 function dietBadges(dish) {
   const tags = dietTags(dish)
   const badges = []
@@ -44,30 +90,47 @@ function dietBadges(dish) {
 }
 
 export default function App() {
-  const [mode, setMode] = useState('air-fryer')
-  const [lane, setLane] = useState('all')
-  const [diet, setDiet] = useState('all')
+  const initial = useMemo(
+    () => decodeState(typeof window !== 'undefined' ? window.location.hash : ''),
+    [],
+  )
+
+  const [mode, setMode] = useState(initial.mode ?? 'air-fryer')
+  const [lane, setLane] = useState(initial.lane ?? 'all')
+  const [diet, setDiet] = useState(initial.diet ?? 'all')
   const [query, setQuery] = useState('')
   const [hideLocked, setHideLocked] = useState(false)
+  const [onlyFavs, setOnlyFavs] = useState(false)
   const [batch, setBatch] = useState(1)
   const [pantryOpen, setPantryOpen] = useState(false)
   const [owned, setOwned] = useState(() => new Set(loadOwned() ?? PANTRY_IDS))
   const [proteinId, setProteinId] = useState(() => {
+    if (initial.protein) return initial.protein
     try {
       return localStorage.getItem(PROTEIN_KEY) || 'salmon'
     } catch {
       return 'salmon'
     }
   })
-  const [donenessId, setDonenessId] = useState(null)
+  const [donenessId, setDonenessId] = useState(initial.doneness ?? null)
+  const [calibrationPct, setCalibrationPct] = useState(() => readNum(CALIB_KEY, 0))
+  const [favorites, setFavorites] = useState(() => new Set(readJSON(FAVS_KEY, [])))
+  const [customGlazes, setCustomGlazes] = useState(() => readJSON(CUSTOM_KEY, []))
+  const [addingGlaze, setAddingGlaze] = useState(false)
+  const [runningMeal, setRunningMeal] = useState(null) // { mealId, startedAt }
   const [timers, setTimers] = useState({})
   const [now, setNow] = useState(() => Date.now())
 
   const audioCtxRef = useRef(null)
   const timersRef = useRef(timers)
+  const runRef = useRef(runningMeal)
+  const prevRunIdxRef = useRef(-1)
   useEffect(() => {
     timersRef.current = timers
   }, [timers])
+  useEffect(() => {
+    runRef.current = runningMeal
+  }, [runningMeal])
 
   const protein = PROTEINS.find((p) => p.id === proteinId) ?? PROTEINS[0]
 
@@ -101,19 +164,24 @@ export default function App() {
     }
   }
 
+  // Persistence
   useEffect(() => {
     saveOwned([...owned])
   }, [owned])
-
   useEffect(() => {
-    try {
-      localStorage.setItem(PROTEIN_KEY, proteinId)
-    } catch {
-      /* ignore */
-    }
+    writeKey(PROTEIN_KEY, proteinId)
   }, [proteinId])
+  useEffect(() => {
+    writeKey(CALIB_KEY, String(calibrationPct))
+  }, [calibrationPct])
+  useEffect(() => {
+    writeKey(FAVS_KEY, JSON.stringify([...favorites]))
+  }, [favorites])
+  useEffect(() => {
+    writeKey(CUSTOM_KEY, JSON.stringify(customGlazes))
+  }, [customGlazes])
 
-  // Single heartbeat: advance the clock and settle finished timers.
+  // Single heartbeat: settle finished timers + advance the meal runner.
   useEffect(() => {
     const iv = setInterval(() => {
       const t = Date.now()
@@ -128,14 +196,26 @@ export default function App() {
         }
         next[id] = s
       }
+      const run = runRef.current
+      if (run) {
+        const meal = MEALS.find((m) => m.id === run.mealId)
+        if (meal) {
+          const rs = runnerState(meal, (t - run.startedAt) / 1000)
+          if (rs.currentIndex > prevRunIdxRef.current) {
+            prevRunIdxRef.current = rs.currentIndex
+            beep()
+            notify(rs.steps[rs.currentIndex]?.text ?? 'Next step')
+          }
+        }
+      }
       setNow(t)
       if (changed) setTimers(next)
     }, 250)
     return () => clearInterval(iv)
   }, [])
 
-  // Keep the screen awake while any timer runs (re-acquiring on return).
-  const anyRunning = Object.values(timers).some((t) => t.running)
+  // Keep the screen awake while a timer or a meal plan is running.
+  const anyRunning = Object.values(timers).some((t) => t.running) || !!runningMeal
   useEffect(() => {
     if (!anyRunning || !('wakeLock' in navigator)) return
     let lock = null
@@ -144,7 +224,7 @@ export default function App() {
       try {
         lock = await navigator.wakeLock.request('screen')
       } catch {
-        /* denied — ignore */
+        /* denied */
       }
     }
     acquire()
@@ -159,7 +239,8 @@ export default function App() {
     }
   }, [anyRunning])
 
-  const modeBuilds = mode === 'air-fryer' ? GLAZE : mode === 'sides' ? SIDES : RICE
+  const glazeBuilds = useMemo(() => [...GLAZE, ...customGlazes], [customGlazes])
+  const modeBuilds = mode === 'air-fryer' ? glazeBuilds : mode === 'sides' ? SIDES : RICE
   const modeDishes = useMemo(() => {
     const effProtein = withDoneness(protein, donenessId)
     return modeBuilds.map((b) => withProtein(b, effProtein))
@@ -169,14 +250,14 @@ export default function App() {
     let list = filterDishes(modeDishes, { lane, hideLocked, owned, pantry: PANTRY_IDS })
     list = searchDishes(list, query, labelFor)
     if (diet !== 'all') list = list.filter((d) => matchesDiet(d, diet))
+    if (onlyFavs) list = list.filter((d) => favorites.has(d.id))
     return list
-  }, [modeDishes, lane, hideLocked, owned, query, diet])
+  }, [modeDishes, lane, hideLocked, owned, query, diet, onlyFavs, favorites])
 
   function switchMode(next) {
     setMode(next)
     setLane('all')
   }
-
   function toggleItem(id) {
     setOwned((prev) => {
       const next = new Set(prev)
@@ -184,24 +265,78 @@ export default function App() {
       return next
     })
   }
-
   const setAll = (on) => setOwned(on ? new Set(PANTRY_IDS) : new Set())
+  function toggleFav(id) {
+    setFavorites((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
-  const timerFor = (dish) => timers[dish.id] ?? createTimer(dish.cookSeconds)
+  const cookSecondsFor = (dish) =>
+    dish.cookSeconds != null ? calibrateSeconds(dish.cookSeconds, calibrationPct) : 0
+  const timerFor = (dish) => timers[dish.id] ?? createTimer(cookSecondsFor(dish))
   const startTimer = (dish) => {
     unlockAudio()
     setTimers((p) => ({
       ...p,
-      [dish.id]: start(p[dish.id] ?? createTimer(dish.cookSeconds), Date.now()),
+      [dish.id]: start(p[dish.id] ?? createTimer(cookSecondsFor(dish)), Date.now()),
     }))
   }
   const pauseTimer = (dish) =>
     setTimers((p) => ({
       ...p,
-      [dish.id]: pause(p[dish.id] ?? createTimer(dish.cookSeconds), Date.now()),
+      [dish.id]: pause(p[dish.id] ?? createTimer(cookSecondsFor(dish)), Date.now()),
     }))
   const resetTimer = (dish) =>
-    setTimers((p) => ({ ...p, [dish.id]: reset(p[dish.id] ?? createTimer(dish.cookSeconds)) }))
+    setTimers((p) => ({ ...p, [dish.id]: reset(p[dish.id] ?? createTimer(cookSecondsFor(dish))) }))
+
+  function startMeal(meal) {
+    unlockAudio()
+    try {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission()
+      }
+    } catch {
+      /* ignore */
+    }
+    prevRunIdxRef.current = -1
+    setRunningMeal({ mealId: meal.id, startedAt: now })
+  }
+  function downloadICS(meal) {
+    try {
+      const blob = new Blob([mealToICS(meal, now)], { type: 'text/calendar' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${meal.id}.ics`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      /* ignore */
+    }
+  }
+  function shareView() {
+    const hash = encodeState({ mode, protein: proteinId, doneness: donenessId, diet, lane })
+    try {
+      window.location.hash = hash
+      navigator.clipboard?.writeText(window.location.href)
+    } catch {
+      /* ignore */
+    }
+  }
+  function addGlaze(glaze) {
+    setCustomGlazes((prev) => [...prev, glaze])
+    setAddingGlaze(false)
+  }
+  function deleteGlaze(id) {
+    setCustomGlazes((prev) => prev.filter((g) => g.id !== id))
+  }
+
+  const mealElapsed = runningMeal
+    ? Math.max(0, Math.floor((now - runningMeal.startedAt) / 1000))
+    : 0
 
   return (
     <div className="app">
@@ -210,16 +345,21 @@ export default function App() {
           <h1>Glaze Lab</h1>
           <p>Pick a protein. Glaze it. Rice it.</p>
         </div>
-        <button
-          className="pantry-btn"
-          onClick={() => setPantryOpen((v) => !v)}
-          aria-expanded={pantryOpen}
-        >
-          Pantry{' '}
-          <span className="count">
-            {owned.size}/{PANTRY_IDS.length}
-          </span>
-        </button>
+        <div className="top-actions">
+          <button className="ghost-btn" onClick={shareView}>
+            Share
+          </button>
+          <button
+            className="pantry-btn"
+            onClick={() => setPantryOpen((v) => !v)}
+            aria-expanded={pantryOpen}
+          >
+            Pantry{' '}
+            <span className="count">
+              {owned.size}/{PANTRY_IDS.length}
+            </span>
+          </button>
+        </div>
       </header>
 
       {(mode === 'air-fryer' || mode === 'rice-cooker') && (
@@ -263,7 +403,7 @@ export default function App() {
 
       <div className="modes" role="tablist" aria-label="Cooking mode">
         {[
-          ['air-fryer', 'Air-Fryer', GLAZE.length],
+          ['air-fryer', 'Air-Fryer', glazeBuilds.length],
           ['rice-cooker', 'Rice-Cooker', RICE.length],
           ['sides', 'Sides', SIDES.length],
           ['meals', 'Meals', MEALS.length],
@@ -314,6 +454,14 @@ export default function App() {
               />
               Hide locked
             </label>
+            <label className="hide-locked">
+              <input
+                type="checkbox"
+                checked={onlyFavs}
+                onChange={(e) => setOnlyFavs(e.target.checked)}
+              />
+              ★ Favorites
+            </label>
           </div>
 
           <div className="lanes" aria-label="Lane filter">
@@ -345,7 +493,10 @@ export default function App() {
       {mode === 'air-fryer' && (
         <p className="tip">
           Times are starting points for a 5.8-qt basket — cook to the internal temp with a
-          thermometer, since air-fryer set temps drift.
+          thermometer, since air-fryer set temps drift.{' '}
+          <button className="linkish" onClick={() => setAddingGlaze(true)}>
+            + Add your own glaze
+          </button>
         </p>
       )}
       {mode === 'rice-cooker' && (
@@ -363,13 +514,26 @@ export default function App() {
 
       <main className="grid">
         {mode === 'meals'
-          ? MEALS.map((meal) => <MealCard key={meal.id} meal={meal} />)
+          ? MEALS.map((meal) => (
+              <MealCard
+                key={meal.id}
+                meal={meal}
+                running={runningMeal?.mealId === meal.id}
+                elapsed={runningMeal?.mealId === meal.id ? mealElapsed : 0}
+                onStart={() => startMeal(meal)}
+                onStop={() => setRunningMeal(null)}
+                onCalendar={() => downloadICS(meal)}
+              />
+            ))
           : visible.map((dish) => (
               <DishCard
                 key={dish.id}
                 dish={dish}
                 owned={owned}
                 batch={batch}
+                isFav={favorites.has(dish.id)}
+                onToggleFav={() => toggleFav(dish.id)}
+                onDelete={dish.custom ? () => deleteGlaze(dish.id) : null}
                 timer={dish.mode === 'air-fryer' ? timerFor(dish) : null}
                 now={now}
                 onStart={() => startTimer(dish)}
@@ -387,14 +551,30 @@ export default function App() {
           owned={owned}
           onToggle={toggleItem}
           onAll={setAll}
+          calibrationPct={calibrationPct}
+          onCalibrate={setCalibrationPct}
           onClose={() => setPantryOpen(false)}
         />
       )}
+
+      {addingGlaze && <AddGlazeForm onAdd={addGlaze} onClose={() => setAddingGlaze(false)} />}
     </div>
   )
 }
 
-function DishCard({ dish, owned, batch, timer, now, onStart, onPause, onReset }) {
+function DishCard({
+  dish,
+  owned,
+  batch,
+  isFav,
+  onToggleFav,
+  onDelete,
+  timer,
+  now,
+  onStart,
+  onPause,
+  onReset,
+}) {
   const missing = missingIngredients(dish, owned, PANTRY_IDS)
   const locked = missing.length > 0
   const scaled = scaleIngredients(dish.ingredients, batch)
@@ -409,8 +589,19 @@ function DishCard({ dish, owned, batch, timer, now, onStart, onPause, onReset })
             needs: {missing.map(labelFor).join(', ')}
           </span>
         )}
+        <button
+          className={`fav ${isFav ? 'on' : ''}`}
+          onClick={onToggleFav}
+          aria-label={isFav ? 'Remove favorite' : 'Add favorite'}
+          aria-pressed={isFav}
+        >
+          {isFav ? '★' : '☆'}
+        </button>
       </div>
-      <h3>{dish.name}</h3>
+      <h3>
+        {dish.name}
+        {dish.custom && <span className="custom-tag">custom</span>}
+      </h3>
       <p className="blurb">{dish.blurb}</p>
 
       {badges.length > 0 && (
@@ -453,7 +644,6 @@ function DishCard({ dish, owned, batch, timer, now, onStart, onPause, onReset })
         </div>
       )}
       {dish.tip && <p className="preptip">💡 {dish.tip}</p>}
-
       {dish.cooker && (
         <div className="cookmeta">
           <span className="temp">{dish.cooker}</span>
@@ -463,6 +653,11 @@ function DishCard({ dish, owned, batch, timer, now, onStart, onPause, onReset })
 
       {timer && (
         <CookTimer timer={timer} now={now} onStart={onStart} onPause={onPause} onReset={onReset} />
+      )}
+      {onDelete && (
+        <button className="ghost small delete-glaze" onClick={onDelete}>
+          Delete glaze
+        </button>
       )}
     </article>
   )
@@ -485,38 +680,154 @@ function CookTimer({ timer, now, onStart, onPause, onReset }) {
   )
 }
 
-function MealCard({ meal }) {
+function MealCard({ meal, running, elapsed, onStart, onStop, onCalendar }) {
+  const rs = running ? runnerState(meal, elapsed) : null
+  const steps = rs ? rs.steps : orderedSteps(meal).map((s) => ({ ...s, status: 'upcoming' }))
+
   return (
-    <article className="card meal-card">
+    <article className={`card meal-card ${running ? 'running' : ''}`}>
       <div className="card-head">
         <span className="lane-tag">{meal.serves}</span>
         <span className="meal-total">~{elapsedLabel(meal.totalMinutes)}</span>
       </div>
       <h3>{meal.name}</h3>
-      <p className="blurb">{meal.blurb}</p>
+
+      {running && rs && (
+        <div className={`run-banner ${rs.complete ? 'done' : ''}`}>
+          {rs.complete ? (
+            <span>✓ Done — plate up!</span>
+          ) : (
+            <span>
+              Next in <strong>{formatTime(rs.secondsToNext)}</strong> ·{' '}
+              {rs.steps[rs.nextIndex]?.text}
+            </span>
+          )}
+        </div>
+      )}
+      {!running && <p className="blurb">{meal.blurb}</p>}
+
       <ol className="timeline">
-        {orderedSteps(meal).map((s, i) => (
-          <li key={i} className="tl-step">
-            <span className="tl-clock">{elapsedLabel(s.atMinute)}</span>
+        {steps.map((s, i) => (
+          <li key={i} className={`tl-step ${s.status}`}>
+            <span className="tl-clock">
+              {running && s.status === 'done' ? '✓' : elapsedLabel(s.atMinute)}
+            </span>
             <span className={`tl-app ${s.appliance}`}>{APPLIANCE_LABEL[s.appliance]}</span>
             <span className="tl-text">{s.text}</span>
           </li>
         ))}
       </ol>
+
+      <div className="meal-actions">
+        {running ? (
+          <button onClick={onStop}>Stop</button>
+        ) : (
+          <>
+            <button onClick={onStart}>Start plan</button>
+            <button className="ghost small" onClick={onCalendar}>
+              Add to Calendar
+            </button>
+            <button className="ghost small" onClick={() => window.print()}>
+              Print
+            </button>
+          </>
+        )}
+      </div>
     </article>
   )
 }
 
-function PantryDrawer({ owned, onToggle, onAll, onClose }) {
+function AddGlazeForm({ onAdd, onClose }) {
+  const [name, setName] = useState('')
+  const [lane, setLane] = useState('Umami')
+  const [picked, setPicked] = useState([])
+  const items = PANTRY.filter((p) => GLAZE_ITEM_GROUPS.has(p.group))
+  const lanesList = ['Sweet & Sticky', 'Umami', 'Spicy', 'Citrus', 'Herby']
+
+  const toggle = (id) =>
+    setPicked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+
+  const canSave = name.trim().length > 0 && picked.length > 0
+  const save = () => {
+    if (!canSave) return
+    onAdd({
+      id: `c-${Date.now()}`,
+      name: name.trim(),
+      mode: 'air-fryer',
+      lane,
+      usesProtein: true,
+      custom: true,
+      blurb: 'Your custom glaze.',
+      ingredients: picked.map((item) => ({ item, amount: 1, unit: 'tbsp' })),
+      steps: [
+        'Whisk the glaze ingredients together.',
+        'Coat the protein and air-fry at the shown temp — use the timer.',
+      ],
+    })
+  }
+
+  return (
+    <>
+      <div className="scrim" onClick={onClose} />
+      <aside className="drawer" role="dialog" aria-modal="true" aria-label="Add a glaze">
+        <div className="drawer-head">
+          <h2>Add a glaze</h2>
+          <button className="close" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
+        </div>
+        <label className="field">
+          <span>Name</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Hoisin–Lime"
+          />
+        </label>
+        <label className="field">
+          <span>Lane</span>
+          <select value={lane} onChange={(e) => setLane(e.target.value)}>
+            {lanesList.map((l) => (
+              <option key={l}>{l}</option>
+            ))}
+          </select>
+        </label>
+        <p className="drawer-sub">Pick the glaze ingredients (amounts default to 1 tbsp):</p>
+        <div className="pantry-items">
+          {items.map((p) => (
+            <label key={p.id} className={picked.includes(p.id) ? 'on' : 'off'}>
+              <input
+                type="checkbox"
+                checked={picked.includes(p.id)}
+                onChange={() => toggle(p.id)}
+              />
+              {p.label}
+            </label>
+          ))}
+        </div>
+        <div className="drawer-actions">
+          <button disabled={!canSave} onClick={save}>
+            Save glaze
+          </button>
+          <button className="ghost" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </aside>
+    </>
+  )
+}
+
+function PantryDrawer({ owned, onToggle, onAll, calibrationPct, onCalibrate, onClose }) {
   const ref = useRef(null)
 
   useEffect(() => {
     const node = ref.current
     const prev = document.activeElement
     const focusables = () =>
-      [...node.querySelectorAll('button, input, [href], [tabindex]:not([tabindex="-1"])')].filter(
-        (el) => !el.disabled && el.offsetParent !== null,
-      )
+      [
+        ...node.querySelectorAll('button, input, select, [href], [tabindex]:not([tabindex="-1"])'),
+      ].filter((el) => !el.disabled && el.offsetParent !== null)
     focusables()[0]?.focus()
 
     function onKey(e) {
@@ -546,9 +857,8 @@ function PantryDrawer({ owned, onToggle, onAll, onClose }) {
     }
   }, [onClose])
 
-  const impact = missingImpact([...GLAZE, ...RICE], owned, PANTRY_IDS).slice(0, 4)
-  const list = shoppingList([...GLAZE, ...RICE], owned, PANTRY_IDS)
-
+  const impact = missingImpact([...GLAZE, ...RICE, ...SIDES], owned, PANTRY_IDS).slice(0, 4)
+  const list = shoppingList([...GLAZE, ...RICE, ...SIDES], owned, PANTRY_IDS)
   const copyList = () => {
     const text = list.map((x) => labelFor(x.item)).join('\n')
     navigator.clipboard?.writeText(text).catch(() => {})
@@ -564,9 +874,23 @@ function PantryDrawer({ owned, onToggle, onAll, onClose }) {
             ✕
           </button>
         </div>
-        <p className="drawer-sub">
-          Uncheck what you're out of — dishes needing it grey out in both modes.
-        </p>
+
+        <section className="insight">
+          <h4>Your air fryer</h4>
+          <p className="drawer-sub">Runs hot or cold? Shift every air-fryer time to match.</p>
+          <div className="calib">
+            {CALIB_OPTIONS.map((o) => (
+              <button
+                key={o.pct}
+                className={`done-chip ${calibrationPct === o.pct ? 'active' : ''}`}
+                onClick={() => onCalibrate(o.pct)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
         <div className="drawer-actions">
           <button onClick={() => onAll(true)}>Check all</button>
           <button className="ghost" onClick={() => onAll(false)}>

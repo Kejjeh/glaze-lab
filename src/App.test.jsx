@@ -4,7 +4,10 @@ import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import App from './App.jsx'
 import { PANTRY } from './data/recipes.js'
 
-beforeEach(() => localStorage.clear())
+beforeEach(() => {
+  localStorage.clear()
+  window.location.hash = ''
+})
 afterEach(cleanup)
 
 const cardOf = (matcher) => screen.getByText(matcher).closest('article')
@@ -161,5 +164,57 @@ describe('Glaze Lab app', () => {
     render(<App />)
     expect(screen.getByRole('button', { name: 'Steak' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Pork chop' })).toBeTruthy()
+  })
+
+  // ---- personalize / share / runner ----
+
+  it('favorites a dish and filters to favorites only', () => {
+    render(<App />)
+    fireEvent.click(cardOf(/Miso.+Maple Glaze/).querySelector('.fav'))
+    fireEvent.click(screen.getByLabelText('★ Favorites'))
+    expect(screen.getByText(/Miso.+Maple Glaze/)).toBeTruthy()
+    expect(screen.queryByText(/Honey.+Sriracha/)).toBeNull() // not favorited → hidden
+  })
+
+  it('shifts air-fryer times when the unit is calibrated', () => {
+    render(<App />)
+    expect(cardOf(/Miso.+Maple Glaze/).textContent).toContain('8:00') // salmon, no calibration
+    fireEvent.click(screen.getByRole('button', { name: /Pantry/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Runs cold' })) // +15%
+    expect(cardOf(/Miso.+Maple Glaze/).textContent).toContain('9:10') // 480 → 552 → 550s
+  })
+
+  it('adds a custom glaze that shows with a custom tag', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /Add your own glaze/i }))
+    fireEvent.change(screen.getByPlaceholderText(/Hoisin/i), { target: { value: 'My Test Glaze' } })
+    fireEvent.click(screen.getByLabelText('Honey'))
+    fireEvent.click(screen.getByRole('button', { name: 'Save glaze' }))
+    const card = cardOf('My Test Glaze')
+    expect(card.textContent).toContain('custom')
+  })
+
+  it('starts a meal plan and shows the live countdown', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('tab', { name: /Meals/i }))
+    const card = cardOf('Salmon, Rice & Steamed Broccoli')
+    fireEvent.click(
+      [...card.querySelectorAll('button')].find((b) => b.textContent === 'Start plan'),
+    )
+    const running = cardOf('Salmon, Rice & Steamed Broccoli')
+    expect(running.textContent).toContain('Next in')
+    expect([...running.querySelectorAll('button')].some((b) => b.textContent === 'Stop')).toBe(true)
+  })
+
+  it('encodes the current view into the URL on Share', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(window.location.hash).toContain('protein=salmon')
+  })
+
+  it('restores view state from the URL hash', () => {
+    window.location.hash = '#mode=meals'
+    render(<App />)
+    expect(document.querySelector('.mode.active').textContent).toContain('Meals')
   })
 })

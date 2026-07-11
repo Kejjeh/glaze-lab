@@ -29,6 +29,16 @@ persistence. No backend — a static SPA you can "Add to Home Screen" on iOS.
 - **Lane filters** + "Hide locked" to see only what you can cook right now.
 - **Cook timers** on air-fryer cards — a wall-clock countdown that stays accurate even after the
   tab is backgrounded, with a finish beep and a Screen Wake Lock so the phone won't sleep mid-cook.
+- **Live meal runner** — hit Start on a meal plan and the app becomes a conductor: a running
+  countdown to the next step ("Add the broccoli in 4:32"), the current step highlighted, plus a
+  beep + Web Notification + wake lock as each step fires.
+- **Make it yours** — per-unit **calibration** ("mine runs hot → shave 8/15%") that shifts every
+  air-fryer time, **favorites** with a favorites-only filter, and **custom glazes** you build from
+  the pantry — all persisted to `localStorage`.
+- **Share & export** — a **Share** button URL-encodes the current view (mode/protein/doneness), an
+  **Add to Calendar** button exports a meal timeline as timed `.ics` events, and Print gives a
+  clean recipe card.
+- **Dark mode** — full light/dark theming via `prefers-color-scheme`.
 - **Persistence** — your pantry and chosen protein survive reloads via `localStorage`.
 - **PWA** — installable and fully offline: the app shell _and self-hosted fonts_ are precached by
   a service worker, so a cold offline launch keeps its real typography.
@@ -38,33 +48,37 @@ persistence. No backend — a static SPA you can "Add to Home Screen" on iOS.
 The app is built test-first. All logic lives in small pure modules so it can be verified
 through public interfaces, independent of React:
 
-| Module                | Responsibility                                                                 |
-| --------------------- | ------------------------------------------------------------------------------ |
-| `src/data/recipes.js` | `GLAZE`, `RICE`, `PANTRY`, `STAPLES`, `PROTEINS` data (+ integrity-tested)     |
-| `src/lib/protein.js`  | `applyProtein` — inject the protein + its temp/time/doneness/tip               |
-| `src/data/meals.js`   | `MEALS` — coordinated two-appliance meal plans (+ integrity-tested)            |
-| `src/lib/meals.js`    | `orderedSteps`, `elapsedLabel` — meal timeline ordering + labels               |
-| `src/lib/pantry.js`   | `missingIngredients`, `isAvailable` — pantry gating                            |
-| `src/lib/insights.js` | `missingImpact`, `shoppingList` — "what to buy next"                           |
-| `src/lib/search.js`   | `searchDishes` — free-text search                                              |
-| `src/lib/diet.js`     | `dietTags`, `matchesDiet` — dietary tags derived from ingredients              |
-| `src/lib/scaling.js`  | `scaleAmount`, `scaleIngredients`, `formatAmount` — batch scaling              |
-| `src/lib/filters.js`  | `filterDishes` — lane + hide-locked filtering                                  |
-| `src/lib/storage.js`  | `loadOwned`, `saveOwned` — corruption-safe persistence                         |
-| `src/lib/timer.js`    | `createTimer/start/pause/reset/remaining/settle/formatTime` — wall-clock timer |
-| `src/App.jsx`         | React UI that composes the above                                               |
+| Module                 | Responsibility                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| `src/data/recipes.js`  | `GLAZE`, `RICE`, `PANTRY`, `STAPLES`, `PROTEINS` data (+ integrity-tested)     |
+| `src/lib/protein.js`   | `applyProtein` — inject the protein + its temp/time/doneness/tip               |
+| `src/data/meals.js`    | `MEALS` — coordinated two-appliance meal plans (+ integrity-tested)            |
+| `src/lib/meals.js`     | `orderedSteps`, `elapsedLabel` — meal timeline ordering + labels               |
+| `src/lib/runner.js`    | `runnerState` — live meal-runner step status + countdown                       |
+| `src/lib/calibrate.js` | `calibrateSeconds` — per-unit cook-time calibration                            |
+| `src/lib/urlstate.js`  | `encodeState`, `decodeState` — shareable URL view state                        |
+| `src/lib/ics.js`       | `mealToICS` — export a meal plan as a calendar file                            |
+| `src/lib/pantry.js`    | `missingIngredients`, `isAvailable` — pantry gating                            |
+| `src/lib/insights.js`  | `missingImpact`, `shoppingList` — "what to buy next"                           |
+| `src/lib/search.js`    | `searchDishes` — free-text search                                              |
+| `src/lib/diet.js`      | `dietTags`, `matchesDiet` — dietary tags derived from ingredients              |
+| `src/lib/scaling.js`   | `scaleAmount`, `scaleIngredients`, `formatAmount` — batch scaling              |
+| `src/lib/filters.js`   | `filterDishes` — lane + hide-locked filtering                                  |
+| `src/lib/storage.js`   | `loadOwned`, `saveOwned` — corruption-safe persistence                         |
+| `src/lib/timer.js`     | `createTimer/start/pause/reset/remaining/settle/formatTime` — wall-clock timer |
+| `src/App.jsx`          | React UI that composes the above                                               |
 
 A **build** is a protein-agnostic recipe (a glaze, a rice base). `applyProtein(build, protein)`
 renders it with the picked protein as the leading ingredient — so pantry gating, diet tags, and
 the cook timer all follow the protein for free.
 
-**88 tests** (71 pure-logic/data + 17 DOM integration) cover the core promises.
+**107 tests** (86 pure-logic/data + 21 DOM integration) cover the core promises.
 
 ## Develop
 
 ```bash
 npm install
-npm test            # vitest — all 88 tests
+npm test            # vitest — all 107 tests
 npm run lint        # eslint (flat config)
 npm run format      # prettier --write
 npm run dev         # dev server at /glaze-lab/

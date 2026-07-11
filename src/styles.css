@@ -754,3 +754,239 @@ label:focus-within {
   color: var(--muted);
   line-height: 1.4;
 }
+
+/* ---- top actions / share ---- */
+.top-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ghost-btn {
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--body);
+}
+
+/* ---- favorite / custom ---- */
+.card-head .fav {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  padding: 0 2px;
+}
+.card-head .fav.on {
+  color: #f0a500;
+}
+.custom-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--coral-deep);
+  background: #ffe6da;
+  border-radius: 999px;
+  padding: 2px 7px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.delete-glaze {
+  margin-top: 8px;
+  align-self: flex-start;
+  color: var(--coral-deep);
+}
+.linkish {
+  border: none;
+  background: none;
+  color: var(--coral-deep);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+  font-family: var(--body);
+}
+
+/* ---- meal runner ---- */
+.meal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.meal-actions > button {
+  border: none;
+  background: var(--coral);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-family: var(--body);
+}
+.meal-actions .ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.run-banner {
+  background: var(--coral);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+  margin: 4px 0 8px;
+}
+.run-banner.done {
+  background: #2e9e5b;
+}
+.run-banner strong {
+  font-family: var(--mono);
+}
+.meal-card.running {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 2px var(--coral-soft);
+}
+.tl-step.done {
+  opacity: 0.5;
+}
+.tl-step.now .tl-text {
+  font-weight: 700;
+}
+.tl-step.now .tl-clock {
+  color: var(--coral);
+}
+
+/* ---- calibration + form fields ---- */
+.calib {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.field input,
+.field select {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: var(--body);
+}
+.drawer-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- dark mode ---- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --coral: #ff7a5c;
+    --coral-soft: #d9573b;
+    --coral-deep: #ffb09a;
+    --cream: #17120f;
+    --card: #221b16;
+    --ink: #f2e8e1;
+    --muted: #ad9d90;
+    --line: #362b24;
+    --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  }
+  .modes {
+    background: #2b211b;
+  }
+  .lane-tag,
+  .custom-tag {
+    background: #3a2a20;
+  }
+  .card.locked {
+    background: #1e1712;
+    border-color: #3a2f28;
+  }
+  .card.locked h3 {
+    color: #c9b3a6;
+  }
+  .card.locked .blurb,
+  .card.locked .item {
+    color: #9a8478;
+  }
+  .diet-chip.active {
+    background: #1e3326;
+    border-color: #2e9e5b;
+    color: #7fdca3;
+  }
+  .diet-badge {
+    background: #1e3326;
+    color: #7fdca3;
+  }
+  .diet-badge.gluten-free {
+    background: #33280f;
+    color: #e6c375;
+  }
+  .batch-chip.active,
+  .done-chip.active {
+    background: #f2e8e1;
+    color: #17120f;
+    border-color: #f2e8e1;
+  }
+  .search input,
+  .field input,
+  .field select {
+    background: #17120f;
+  }
+  .pantry-items label.on {
+    background: #17120f;
+  }
+  .tl-app.air-fryer {
+    background: #3a2a20;
+    color: var(--coral-deep);
+  }
+  .tl-app.rice-cooker {
+    background: #1e3326;
+    color: #7fdca3;
+  }
+  .tl-app.prep {
+    background: #2a2420;
+    color: #b0a094;
+  }
+  .insight,
+  .shop-item {
+    background: #1e1712;
+  }
+}
+
+/* ---- print ---- */
+@media print {
+  .topbar button,
+  .proteins,
+  .doneness,
+  .modes,
+  .controls,
+  .lanes,
+  .diets,
+  .tip,
+  .meal-actions,
+  .fav,
+  .timer-btns {
+    display: none !important;
+  }
+  .card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+}

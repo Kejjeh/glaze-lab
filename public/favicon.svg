@@ -10,16 +10,15 @@
     </radialGradient>
   </defs>
   <rect width="512" height="512" rx="112" fill="url(#coral)"/><rect width="512" height="512" rx="112" fill="url(#glow)"/>
-  <!-- fish body -->
-  <g transform="translate(6 0)">
-    <path d="M150 256 C150 196 210 150 286 150 C360 150 416 196 416 256 C416 316 360 362 286 362 C210 362 150 316 150 256 Z" fill="#FFF3EC"/>
-    <!-- tail -->
-    <path d="M150 256 L92 200 C104 236 104 276 92 312 Z" fill="#FFF3EC"/>
-    <!-- flesh striations -->
-    <path d="M214 205 C250 235 250 277 214 307" fill="none" stroke="#F5714F" stroke-width="14" stroke-linecap="round" opacity="0.8"/>
-    <path d="M266 198 C304 232 304 280 266 314" fill="none" stroke="#F5714F" stroke-width="14" stroke-linecap="round" opacity="0.7"/>
-    <path d="M318 205 C352 236 352 276 318 307" fill="none" stroke="#F5714F" stroke-width="14" stroke-linecap="round" opacity="0.6"/>
-    <!-- eye -->
-    <circle cx="372" cy="238" r="13" fill="#3A2016"/>
+  <!-- glaze stroke -->
+  <path d="M104 398 Q 256 348 408 398" fill="none" stroke="#C33A24" stroke-width="34" stroke-linecap="round"/>
+  <path d="M126 406 Q 256 364 386 406" fill="none" stroke="#FFD9CC" stroke-width="10" stroke-linecap="round" opacity="0.75"/>
+  <!-- brush -->
+  <g transform="rotate(30 256 250)">
+    <rect x="232" y="86" width="48" height="150" rx="24" fill="#FFF3EC"/>
+    <rect x="226" y="230" width="60" height="28" rx="7" fill="#EF5238"/>
+    <path d="M222 256 L290 256 L306 342 Q256 360 206 342 Z" fill="#FFF3EC"/>
+    <path d="M242 258 L240 348" stroke="#EBD8CC" stroke-width="5" stroke-linecap="round"/>
+    <path d="M266 258 L268 348" stroke="#EBD8CC" stroke-width="5" stroke-linecap="round"/>
   </g>
 </svg>

@@ -1,13 +1,15 @@
 // Glaze Lab recipe data.
-// - PROTEINS: the swappable protein axis. Each carries its own air-fryer cook
-//   time (salmon ≠ chicken thigh) and a default amount/unit.
+// - PROTEINS: the swappable protein axis (salmon, chicken, beef, pork, shrimp,
+//   tofu). Each carries its air-fryer temp/time/target-internal + a prep tip;
+//   steak and salmon also carry doneness `levels`.
 // - PANTRY: the toggleable ingredient master list (proteins included, so they
 //   gate dishes too). A dish greys out when the cook is out of anything it needs.
 // - STAPLES: always-on basics (salt, oil, water...) that never gate a dish.
 // - GLAZE: 10 air-fryer glaze *builds* — protein-agnostic; the picked protein is
-//   injected at render (see lib/protein.js) with its own cook timer.
-// - RICE: 24 rice-cooker dishes. The protein-forward ones set `usesProtein`;
-//   the veg/plain ones are fixed.
+//   injected at render (see lib/protein.js) with its temp/time/doneness.
+// - RICE: 27 rice-cooker dishes (incl. grains). Protein-forward ones set
+//   `usesProtein`; veg/plain ones are fixed. Each shows its COSORI `cooker`.
+// - SIDES: 8 fixed sides — air-fryer (own temp/time) and steamed (Steam function).
 // A build ingredient's `item` must be a PANTRY id or a STAPLES id
 // (enforced by recipes.test.js).
 
