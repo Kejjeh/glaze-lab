@@ -1,3 +1,7 @@
+// The whole UI: one component tree composing the pure src/lib modules over the
+// src/data catalogs. Holds all view state (mode/protein/doneness/filters) and
+// the persisted bits (pantry, calibration, favorites, custom glazes). Logic
+// belongs in src/lib with tests, not here — this file is glue and rendering.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { PANTRY, STAPLES, GLAZE, RICE, SIDES, PROTEINS } from './data/recipes.js'
 import { MEALS } from './data/meals.js'

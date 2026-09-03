@@ -74,12 +74,16 @@ the cook timer all follow the protein for free.
 
 **107 tests** (86 pure-logic/data + 21 DOM integration) cover the core promises.
 
+> **Working on this with an AI agent?** [CLAUDE.md](CLAUDE.md) is the agent-facing
+> source of truth (commands, gotchas, routing); [HANDOFF.md](HANDOFF.md) has current state.
+
 ## Develop
 
 ```bash
 npm install
 npm test            # vitest — all 107 tests
 npm run lint        # eslint (flat config)
+npm run verify      # lint + test + build in one shot
 npm run format      # prettier --write
 npm run dev         # dev server at /glaze-lab/
 npm run build       # production build → dist/

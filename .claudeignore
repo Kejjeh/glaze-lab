@@ -1,0 +1,7 @@
+# Keep agent context small: generated output, deps, lockfile, binary assets.
+node_modules/
+dist/
+dev-dist/
+package-lock.json
+src/fonts/
+public/*.png
