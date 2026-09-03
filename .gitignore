@@ -4,4 +4,6 @@ dev-dist/
 *.local
 .DS_Store
 .vite/
-.claude/
+# Ignore local .claude state but commit shared slash commands.
+.claude/*
+!.claude/commands/
