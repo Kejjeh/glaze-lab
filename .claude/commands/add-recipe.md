@@ -16,10 +16,10 @@ Procedure (data only — no UI changes needed; cards render from data):
    ingredient is new, add it to `PANTRY` first (tests enforce this).
 3. If a new ingredient is meat/fish/stock, add it to the matching set in
    `src/lib/diet.js` — otherwise the dish is mis-tagged vegetarian/vegan.
-4. Update the count assertions in `src/data/recipes.test.js` (or `meals.test.js`)
-   — they pin the catalog sizes.
-5. Run `npm run verify`. Update the counts in README.md and CLAUDE.md
-   (e.g. "10 glaze builds") if they changed.
+4. Run `npm run verify`. The data tests check id uniqueness, ingredient ids, and
+   catalog minimum sizes (`toBeGreaterThanOrEqual`) — adding entries won't trip
+   the minimums, so read any failure carefully; it means a real shape mistake.
+5. Update the catalog counts in README.md and CLAUDE.md (e.g. "10 glaze builds").
 
 Do not invent air-fryer temps/times for new cook methods — reuse an existing
 side/protein's researched values or ask the user (see docs/DECISIONS.md #4).
