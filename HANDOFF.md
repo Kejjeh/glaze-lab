@@ -43,9 +43,8 @@ verify UI via `read_page`/DOM + console instead of screenshots.
 
 ## Open questions (for the owner)
 
-1. The appliance research source doc lives outside the repo
-   (`~/Downloads/compass_artifact_wf-bcc32e96-*.md`, may no longer exist).
-   Should a copy be committed under `docs/` so cook-data changes stay sourced?
+1. ~~Commit the appliance research doc?~~ Resolved 2026-09-03: committed as
+   [docs/appliance-research.md](docs/appliance-research.md).
 2. `CONTEXT.md` was superseded by CLAUDE.md/HANDOFF.md in this handoff pass and
    reduced to a pointer. Delete it entirely, or keep the pointer?
 3. Is deploying (pushing to `main`) something agents may do routinely, or

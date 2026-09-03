@@ -66,7 +66,7 @@ There is no data pipeline, database, or env var. Nothing needs credentials.
   `.favs.v1`, `.custom.v1`). If you change a stored shape, bump the key version and
   keep `storage.js` corruption-safe (bad JSON must not throw).
 - Cook temps/times are **researched values** (Innsky 5.8-qt + USDA). Don't "fix"
-  them from general knowledge; see docs/DECISIONS.md.
+  them from general knowledge; the source is `docs/appliance-research.md`.
 - Dev machine is Windows; scripts are plain npm and work cross-platform.
 
 ## Before you finish any task

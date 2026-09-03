@@ -23,7 +23,7 @@ not found stated.
    17→24 min. The UI always says "cook to internal temp with a thermometer"
    because air-fryer set temps drift. Don't adjust these values from general
    knowledge; change them only with a source or user test-cook feedback.
-   Source research doc lived outside the repo (`~/Downloads/compass_artifact_wf-bcc32e96-*.md`).
+   The research doc is committed at [appliance-research.md](appliance-research.md).
 
 5. **Diet tags derived from ingredients** at render time, never authored per
    dish. Rejected: hand-tagging — tags drift when recipes change. The meat set
