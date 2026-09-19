@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { STORAGE_KEY, loadOwned, saveOwned } from './storage.js'
+import { STORAGE_KEY, loadOwned, saveOwned, loadArray, loadNumber } from './storage.js'
 
 function fakeStorage(seed) {
   const m = new Map(seed ? Object.entries(seed) : [])
@@ -36,5 +36,30 @@ describe('pantry persistence', () => {
   it('returns null when the stored value is not an array', () => {
     const s = fakeStorage({ [STORAGE_KEY]: '{"miso":true}' })
     expect(loadOwned(s)).toBeNull()
+  })
+})
+
+describe('corruption-safe readers', () => {
+  it('loadArray returns the array, or the fallback for non-arrays and bad JSON', () => {
+    expect(loadArray('k', [], { store: fakeStorage({ k: '["a","b"]' }) })).toEqual(['a', 'b'])
+    expect(loadArray('k', [], { store: fakeStorage({ k: '5' }) })).toEqual([])
+    expect(loadArray('k', [], { store: fakeStorage({ k: '{"a":1}' }) })).toEqual([])
+    expect(loadArray('k', [], { store: fakeStorage({ k: '{bad' }) })).toEqual([])
+    expect(loadArray('k', [], { store: fakeStorage() })).toEqual([])
+  })
+
+  it('loadArray drops entries the item validator rejects', () => {
+    const store = fakeStorage({ k: '[{"id":"x","name":"ok"},{"id":"y"},7,null]' })
+    const isItem = (g) => g && typeof g.id === 'string' && typeof g.name === 'string'
+    expect(loadArray('k', [], { store, isItem })).toEqual([{ id: 'x', name: 'ok' }])
+  })
+
+  it('loadNumber returns finite numbers only', () => {
+    expect(loadNumber('k', 0, fakeStorage({ k: '15' }))).toBe(15)
+    expect(loadNumber('k', 0, fakeStorage({ k: '-8' }))).toBe(-8)
+    expect(loadNumber('k', 0, fakeStorage({ k: 'abc' }))).toBe(0)
+    expect(loadNumber('k', 0, fakeStorage({ k: 'Infinity' }))).toBe(0)
+    expect(loadNumber('k', 0, fakeStorage({ k: '' }))).toBe(0)
+    expect(loadNumber('k', 0, fakeStorage())).toBe(0)
   })
 })
