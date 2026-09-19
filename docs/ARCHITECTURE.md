@@ -15,6 +15,7 @@ src/lib/*  — pure functions (no React, no DOM)
    protein.withDoneness(protein, level)
    pantry / diet / filters / search / scaling / insights
    timer / runner / calibrate            ← time-based (wall-clock)
+   session                               ← cook-in-progress persistence + recovery
    storage / urlstate / ics              ← persistence & interchange
         │  data in → data out
         ▼
@@ -48,6 +49,15 @@ derived is persisted, so it can't drift.
 **Wall-clock time** — the cook timer stores an `endsAt` timestamp and the meal
 runner works off "seconds since start". A backgrounded phone tab stops firing
 intervals; timestamps make the countdown correct on wake.
+
+**Cook session survives reload** — `lib/session.js` serializes running/paused/
+finished timers and the meal runner's `startedAt` to `glazelab.session.v1` on
+every change, and `App.jsx` restores them in its first render. Restore validates
+every field (a broken entry is dropped, bad JSON shows a clear notice and
+clears), ignores sessions older than 24 h, and rebases anchors when the system
+clock was set backwards (a save stamp in the future, or a heartbeat that sees
+time go backwards). Forward jumps are indistinguishable from real elapsed time
+and are trusted, per the wall-clock decision.
 
 ## Why it's structured this way
 

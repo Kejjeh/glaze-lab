@@ -55,6 +55,15 @@ not found stated.
     reads (bad JSON → default, never throw). Shape changes get a new version
     suffix rather than migrations (inferred).
 
-13. **Feature development is done.** As of Jul 2026 the owner considers the
+13. **Cook session persisted, wall clock trusted forward, rebased backward**
+    (Sept 2026 recovery milestone). Timers + meal runner are saved under
+    `glazelab.session.v1` and restored on load so a reload/killed tab mid-cook
+    resumes at the right second. A backwards clock jump is unambiguous, so it is
+    rebased (progress preserved); a forward jump cannot be told apart from real
+    elapsed time, so it is trusted. Sessions older than 24 h are dropped rather
+    than resumed as "done". Rejected: monotonic `performance.now()` — it pauses
+    during system sleep on some platforms and doesn't survive reload.
+
+14. **Feature development is done.** As of Jul 2026 the owner considers the
     backlog exhausted; the next input is real cooking use, not more features.
     Don't invent features; fix what feedback surfaces.

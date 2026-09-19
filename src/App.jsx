@@ -17,8 +17,9 @@ import { searchDishes } from './lib/search.js'
 import { dietTags, matchesDiet } from './lib/diet.js'
 import { missingImpact, shoppingList } from './lib/insights.js'
 import { scaleIngredients, formatAmount } from './lib/scaling.js'
-import { createTimer, start, pause, reset, remaining, settle, formatTime } from './lib/timer.js'
-import { loadOwned, saveOwned } from './lib/storage.js'
+import { createTimer, start, pause, remaining, settle, formatTime } from './lib/timer.js'
+import { loadOwned, saveOwned, loadArray, loadNumber } from './lib/storage.js'
+import { restoreSession, loadSession, saveSession, shiftClock } from './lib/session.js'
 
 const PANTRY_IDS = PANTRY.map((p) => p.id)
 const LABELS = Object.fromEntries(PANTRY.map((p) => [p.id, p.label]))
@@ -36,6 +37,18 @@ const PROTEIN_KEY = 'glazelab.protein.v1'
 const CALIB_KEY = 'glazelab.calib.v1'
 const FAVS_KEY = 'glazelab.favs.v1'
 const CUSTOM_KEY = 'glazelab.custom.v1'
+const MEAL_IDS = MEALS.map((m) => m.id)
+// A stored custom glaze must have what DishCard renders, or it's dropped on load.
+const isCustomGlaze = (g) =>
+  !!g &&
+  typeof g.id === 'string' &&
+  typeof g.name === 'string' &&
+  Array.isArray(g.ingredients) &&
+  g.ingredients.every((i) => i && typeof i.item === 'string' && Number.isFinite(i.amount)) &&
+  Array.isArray(g.steps)
+// A heartbeat that sees the clock go back by more than this rebases every
+// running countdown instead of stretching it by the difference.
+const CLOCK_BACK_MS = 2000
 const CALIB_OPTIONS = [
   { pct: -15, label: 'Runs hot' },
   { pct: -8, label: '−8%' },
@@ -49,22 +62,6 @@ const GLAZE_ITEM_GROUPS = new Set(['Glaze & Sauce', 'Aromatics', 'Citrus', 'Fini
 const labelFor = (item) => LABELS[item] ?? item.charAt(0).toUpperCase() + item.slice(1)
 const withProtein = (build, protein) => (build.usesProtein ? applyProtein(build, protein) : build)
 
-const readJSON = (key, fallback) => {
-  try {
-    const v = localStorage.getItem(key)
-    return v ? JSON.parse(v) : fallback
-  } catch {
-    return fallback
-  }
-}
-const readNum = (key, fallback) => {
-  try {
-    const v = localStorage.getItem(key)
-    return v != null ? Number(v) : fallback
-  } catch {
-    return fallback
-  }
-}
 const writeKey = (key, value) => {
   try {
     localStorage.setItem(key, value)
@@ -99,7 +96,25 @@ export default function App() {
     [],
   )
 
-  const [mode, setMode] = useState(initial.mode ?? 'air-fryer')
+  // Restore a cook in progress (timers + meal runner) before the first render,
+  // so a reload mid-cook lands exactly where the wall clock says it should.
+  const [customGlazes, setCustomGlazes] = useState(() =>
+    loadArray(CUSTOM_KEY, [], { isItem: isCustomGlaze }),
+  )
+  const [recovered] = useState(() => {
+    const at = Date.now()
+    const r = restoreSession(loadSession(), {
+      now: at,
+      mealIds: MEAL_IDS,
+      dishIds: [...GLAZE, ...SIDES, ...customGlazes].map((d) => d.id),
+    })
+    return { ...r, at }
+  })
+  const [notice, setNotice] = useState(() =>
+    recovered.status === 'ok' || recovered.status === 'corrupt' ? recovered.status : null,
+  )
+
+  const [mode, setMode] = useState(initial.mode ?? (recovered.runningMeal ? 'meals' : 'air-fryer'))
   const [lane, setLane] = useState(initial.lane ?? 'all')
   const [diet, setDiet] = useState(initial.diet ?? 'all')
   const [query, setQuery] = useState('')
@@ -117,18 +132,28 @@ export default function App() {
     }
   })
   const [donenessId, setDonenessId] = useState(initial.doneness ?? null)
-  const [calibrationPct, setCalibrationPct] = useState(() => readNum(CALIB_KEY, 0))
-  const [favorites, setFavorites] = useState(() => new Set(readJSON(FAVS_KEY, [])))
-  const [customGlazes, setCustomGlazes] = useState(() => readJSON(CUSTOM_KEY, []))
+  const [calibrationPct, setCalibrationPct] = useState(() => loadNumber(CALIB_KEY, 0))
+  const [favorites, setFavorites] = useState(
+    () => new Set(loadArray(FAVS_KEY, [], { isItem: (x) => typeof x === 'string' })),
+  )
   const [addingGlaze, setAddingGlaze] = useState(false)
-  const [runningMeal, setRunningMeal] = useState(null) // { mealId, startedAt }
-  const [timers, setTimers] = useState({})
-  const [now, setNow] = useState(() => Date.now())
+  const [runningMeal, setRunningMeal] = useState(recovered.runningMeal) // { mealId, startedAt }
+  const [timers, setTimers] = useState(recovered.timers)
+  const [now, setNow] = useState(recovered.at)
 
   const audioCtxRef = useRef(null)
   const timersRef = useRef(timers)
   const runRef = useRef(runningMeal)
-  const prevRunIdxRef = useRef(-1)
+  // Seed with the restored meal's current step so resuming doesn't re-announce it.
+  const prevRunIdxRef = useRef(
+    recovered.runningMeal
+      ? runnerState(
+          MEALS.find((m) => m.id === recovered.runningMeal.mealId),
+          (recovered.at - recovered.runningMeal.startedAt) / 1000,
+        ).currentIndex
+      : -1,
+  )
+  const lastTickRef = useRef(recovered.at)
   useEffect(() => {
     timersRef.current = timers
   }, [timers])
@@ -184,14 +209,32 @@ export default function App() {
   useEffect(() => {
     writeKey(CUSTOM_KEY, JSON.stringify(customGlazes))
   }, [customGlazes])
+  useEffect(() => {
+    saveSession({ timers, runningMeal }, Date.now())
+  }, [timers, runningMeal])
 
   // Single heartbeat: settle finished timers + advance the meal runner.
   useEffect(() => {
     const iv = setInterval(() => {
       const t = Date.now()
-      const cur = timersRef.current
+      let cur = timersRef.current
       let changed = false
       const next = {}
+      // System clock set backwards: rebase every wall-clock anchor by the jump
+      // so countdowns and the meal timeline keep their real progress.
+      if (t < lastTickRef.current - CLOCK_BACK_MS) {
+        const shifted = shiftClock(
+          { timers: cur, runningMeal: runRef.current },
+          t - lastTickRef.current,
+        )
+        cur = shifted.timers
+        changed = true
+        if (shifted.runningMeal) {
+          runRef.current = shifted.runningMeal
+          setRunningMeal(shifted.runningMeal)
+        }
+      }
+      lastTickRef.current = t
       for (const [id, tm] of Object.entries(cur)) {
         const s = settle(tm, t)
         if (s !== tm) {
@@ -293,8 +336,19 @@ export default function App() {
       ...p,
       [dish.id]: pause(p[dish.id] ?? createTimer(cookSecondsFor(dish)), Date.now()),
     }))
+  // Reset drops the entry so the timer is re-derived from the current protein,
+  // doneness and calibration on the next render (a stored one went stale).
   const resetTimer = (dish) =>
-    setTimers((p) => ({ ...p, [dish.id]: reset(p[dish.id] ?? createTimer(cookSecondsFor(dish))) }))
+    setTimers((p) => {
+      const next = { ...p }
+      delete next[dish.id]
+      return next
+    })
+  function clearCook() {
+    setTimers({})
+    setRunningMeal(null)
+    setNotice(null)
+  }
 
   function startMeal(meal) {
     unlockAudio()
@@ -365,6 +419,52 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {notice === 'ok' && (
+        <div className="notice" role="status">
+          <span>
+            Resumed your cook from the last visit
+            {recovered.restored.mealId && (
+              <>
+                {' '}
+                — <strong>
+                  {MEALS.find((m) => m.id === recovered.restored.mealId)?.name}
+                </strong>{' '}
+                plan
+              </>
+            )}
+            {recovered.restored.timers > 0 && (
+              <>
+                {recovered.restored.mealId ? ' and ' : ' — '}
+                <strong>
+                  {recovered.restored.timers} timer{recovered.restored.timers === 1 ? '' : 's'}
+                </strong>
+              </>
+            )}
+            . Times follow the wall clock.
+          </span>
+          <span className="notice-btns">
+            <button className="ghost small" onClick={clearCook}>
+              Clear cook
+            </button>
+            <button className="ghost small" onClick={() => setNotice(null)} aria-label="Dismiss">
+              ✕
+            </button>
+          </span>
+        </div>
+      )}
+      {notice === 'corrupt' && (
+        <div className="notice error" role="alert">
+          <span>
+            Your saved cook session couldn't be read, so it was cleared. Timers start fresh.
+          </span>
+          <span className="notice-btns">
+            <button className="ghost small" onClick={() => setNotice(null)} aria-label="Dismiss">
+              ✕
+            </button>
+          </span>
+        </div>
+      )}
 
       {(mode === 'air-fryer' || mode === 'rice-cooker') && (
         <div className="proteins" aria-label="Protein">

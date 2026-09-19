@@ -3,6 +3,7 @@ import { describe, it, expect, afterEach, beforeEach } from 'vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import App from './App.jsx'
 import { PANTRY } from './data/recipes.js'
+import { SESSION_KEY } from './lib/session.js'
 
 beforeEach(() => {
   localStorage.clear()
@@ -216,5 +217,104 @@ describe('Glaze Lab app', () => {
     window.location.hash = '#mode=meals'
     render(<App />)
     expect(document.querySelector('.mode.active').textContent).toContain('Meals')
+  })
+
+  // ---- cook-session recovery (reload / remount) ----
+
+  const saveSessionFixture = (session) =>
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ v: 1, savedAt: Date.now(), ...session }))
+
+  it('resumes a running meal plan after a remount, in Meals mode, with real elapsed time', () => {
+    const startedAt = Date.now() - 31 * 60 * 1000 // 31 minutes into the salmon plate
+    saveSessionFixture({ timers: {}, meal: { mealId: 'm-salmon-rice-broccoli', startedAt } })
+    render(<App />)
+    expect(document.querySelector('.mode.active').textContent).toContain('Meals')
+    const card = screen
+      .getByRole('heading', { name: 'Salmon, Rice & Steamed Broccoli' })
+      .closest('article')
+    expect(card.className).toContain('running')
+    expect(card.textContent).toContain('Next in 9:0') // plate step at 40 min → ~9:00 left
+    expect(card.textContent).toContain('Air-fry salmon') // step 31 min is "now"
+    const status = screen.getByRole('status')
+    expect(status.textContent).toContain('Resumed your cook')
+    expect(status.textContent).toContain('Salmon, Rice & Steamed Broccoli')
+  })
+
+  it('resumes running and paused timers after a remount and can clear the whole cook', () => {
+    const now = Date.now()
+    saveSessionFixture({
+      timers: {
+        'g-miso-maple': {
+          duration: 480,
+          running: true,
+          done: false,
+          remaining: 480,
+          endsAt: now + 300 * 1000,
+        },
+        'g-honey-sriracha': {
+          duration: 480,
+          running: false,
+          done: false,
+          remaining: 123,
+          endsAt: null,
+        },
+      },
+      meal: null,
+    })
+    render(<App />)
+    expect(cardOf(/Miso.+Maple Glaze/).textContent).toContain('5:00')
+    expect(cardOf(/Miso.+Maple Glaze/).querySelector('.timer').className).toContain('running')
+    expect(cardOf(/Honey.+Sriracha/).textContent).toContain('2:03')
+    expect(screen.getByRole('status').textContent).toContain('2 timers')
+    fireEvent.click(screen.getByRole('button', { name: 'Clear cook' }))
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(cardOf(/Miso.+Maple Glaze/).textContent).toContain('8:00')
+    expect(localStorage.getItem(SESSION_KEY)).toBeNull()
+  })
+
+  it('persists the cook session when a timer starts and when a meal starts', () => {
+    render(<App />)
+    fireEvent.click(
+      [...cardOf(/Miso.+Maple Glaze/).querySelectorAll('button')].find(
+        (b) => b.textContent === 'Start',
+      ),
+    )
+    const saved = JSON.parse(localStorage.getItem(SESSION_KEY))
+    expect(saved.v).toBe(1)
+    expect(saved.timers['g-miso-maple'].running).toBe(true)
+    fireEvent.click(screen.getByRole('tab', { name: /Meals/i }))
+    const card = cardOf('Salmon, Rice & Steamed Broccoli')
+    fireEvent.click(
+      [...card.querySelectorAll('button')].find((b) => b.textContent === 'Start plan'),
+    )
+    expect(JSON.parse(localStorage.getItem(SESSION_KEY)).meal.mealId).toBe('m-salmon-rice-broccoli')
+  })
+
+  it('shows a clear error and still renders when the saved session is corrupt', () => {
+    localStorage.setItem(SESSION_KEY, '{definitely not json')
+    render(<App />)
+    expect(screen.getByRole('alert').textContent).toContain("couldn't be read")
+    expect(screen.getByText(/Miso.+Maple Glaze/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('survives corrupt favorites, custom glazes and calibration values', () => {
+    localStorage.setItem('glazelab.favs.v1', '5')
+    localStorage.setItem('glazelab.custom.v1', '[{"id":"x"},{"broken":true}]')
+    localStorage.setItem('glazelab.calib.v1', 'abc')
+    render(<App />)
+    expect(screen.getByText(/Miso.+Maple Glaze/)).toBeTruthy()
+    expect(cardOf(/Miso.+Maple Glaze/).textContent).toContain('8:00') // not NaN:NaN
+    expect(screen.queryByText('custom')).toBeNull()
+  })
+
+  it('a reset timer follows a later protein change', () => {
+    render(<App />)
+    const buttons = () => [...cardOf(/Miso.+Maple Glaze/).querySelectorAll('button')]
+    fireEvent.click(buttons().find((b) => b.textContent === 'Start'))
+    fireEvent.click(buttons().find((b) => b.textContent === 'Reset'))
+    fireEvent.click(screen.getByRole('button', { name: 'Chicken thigh' }))
+    expect(cardOf(/Miso.+Maple Glaze/).textContent).toContain('24:00')
   })
 })
