@@ -7,14 +7,14 @@ Glaze Lab is a client-side React 18 + Vite 5 PWA for hands-off countertop cookin
 each cookable with a swappable protein. Cook data is grounded in the owner's real
 appliances (COSORI CRC-R501-KUS rice cooker, Innsky 5.8-qt air fryer) + USDA temps.
 No backend, no server state — a static SPA deployed to GitHub Pages.
-**State: feature-complete and stable.** 107/107 tests pass, CI green, live at
+**State: feature-complete and stable.** 132/132 tests pass, CI green, live at
 https://kejjeh.github.io/glaze-lab/ (GitHub repo `Kejjeh/glaze-lab`).
 
 ## Commands (all verified working)
 
 ```bash
 npm install        # once (Node 22 in CI; lockfile committed)
-npm test           # vitest — 107 tests, ~10s. THE smoke test.
+npm test           # vitest — 132 tests, ~10s. THE smoke test.
 npm run lint       # eslint (flat config), zero warnings expected
 npm run build      # vite build → dist/ (also validates PWA config)
 npm run verify     # lint + test + build in one shot — run before finishing any task
@@ -35,6 +35,7 @@ There is no data pipeline, database, or env var. Nothing needs credentials.
 | `src/lib/diet.js` | Diet tags derived from ingredients (never stored) |
 | `src/lib/timer.js` | Wall-clock (`endsAt`-based) cook timer |
 | `src/lib/runner.js` | Live meal-runner step status + countdown |
+| `src/lib/session.js` | Cook-session persistence: timers + meal runner survive reload; clock-skew + corruption handling |
 | `src/lib/scaling.js`, `filters.js`, `search.js`, `insights.js` | Batch scaling, lane/locked filters, search, "buy X unlocks N" |
 | `src/lib/calibrate.js`, `storage.js`, `urlstate.js`, `ics.js`, `meals.js` | Calibration %, localStorage, share-URL codec, .ics export, step ordering |
 | `src/App.jsx` | The only React component tree (~960 lines) — composes all of the above |
@@ -63,7 +64,7 @@ There is no data pipeline, database, or env var. Nothing needs credentials.
   `package-lock.json` too.
 - `dist/` is generated output — never edit or commit it.
 - localStorage keys are versioned (`glazelab.pantry.v1`, `.protein.v1`, `.calib.v1`,
-  `.favs.v1`, `.custom.v1`). If you change a stored shape, bump the key version and
+  `.favs.v1`, `.custom.v1`, `.session.v1`). If you change a stored shape, bump the key version and
   keep `storage.js` corruption-safe (bad JSON must not throw).
 - Cook temps/times are **researched values** (Innsky 5.8-qt + USDA). Don't "fix"
   them from general knowledge; the source is `docs/appliance-research.md`.
@@ -75,7 +76,7 @@ There is no data pipeline, database, or env var. Nothing needs credentials.
 npm run verify
 ```
 
-All three must pass (lint clean, 107+ tests green, build succeeds). If you added
+All three must pass (lint clean, 132+ tests green, build succeeds). If you added
 logic, you added tests. Don't push to `main` unless the user asked for a deploy.
 
 ## Model routing
@@ -87,6 +88,6 @@ logic, you added tests. Don't push to `main` unless the user asked for a deploy.
 
 **Escalate to Opus:**
 - `src/lib/protein.js` (protein/doneness injection — the core model)
-- `timer.js` / `runner.js` timing semantics, `urlstate.js` / `ics.js` formats
+- `timer.js` / `runner.js` / `session.js` timing + recovery semantics, `urlstate.js` / `ics.js` formats
 - PWA/service-worker/`vite.config.js` changes, CI workflow changes
 - Anything cross-cutting in `App.jsx` state, or changing researched cook data
