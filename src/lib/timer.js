@@ -10,8 +10,10 @@ export function createTimer(duration) {
   return { duration, running: false, done: false, remaining: duration, endsAt: null }
 }
 
+// Clamped to [0, duration]: a system clock set backwards must never show
+// more time than the cook asked for.
 export function remaining(t, now) {
-  if (t.running) return Math.max(0, Math.ceil((t.endsAt - now) / 1000))
+  if (t.running) return Math.min(t.duration, Math.max(0, Math.ceil((t.endsAt - now) / 1000)))
   return t.remaining
 }
 

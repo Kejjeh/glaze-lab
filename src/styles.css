@@ -276,6 +276,38 @@ body {
   color: #9a6a12;
 }
 
+/* ---- recovery notice ---- */
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--coral-soft);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.notice.error {
+  border-color: #c33a24;
+  background: #fff1ee;
+}
+.notice-btns {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.notice button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--body);
+}
 /* ---- thermometer tip ---- */
 .tip {
   margin: -8px 0 16px;
@@ -908,6 +940,10 @@ label:focus-within {
   }
   .modes {
     background: #2b211b;
+  }
+  .notice.error {
+    background: #33201b;
+    border-color: #ff7a5c;
   }
   .lane-tag,
   .custom-tag {

@@ -61,3 +61,10 @@ describe('cook timer (wall-clock)', () => {
     expect(formatTime(600)).toBe('10:00')
   })
 })
+
+describe('cook timer — system clock set backwards', () => {
+  it('never shows more than the full duration', () => {
+    const t = start(createTimer(60), 100 * S)
+    expect(remaining(t, 100 * S - 3600 * S)).toBe(60)
+  })
+})
