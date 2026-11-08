@@ -70,6 +70,22 @@ There is no data pipeline, database, or env var. Nothing needs credentials.
   them from general knowledge; the source is `docs/appliance-research.md`.
 - Dev machine is Windows; scripts are plain npm and work cross-platform.
 
+## Skills for this repo
+
+Load these with the Skill tool when the situation comes up; the user does not need to ask.
+
+| Situation in this repo | Skill |
+|---|---|
+| Adding a glaze build, rice bowl, side or meal plan | `add-recipe` (project command) |
+| New or changed logic in `src/lib/` — write the failing `*.test.js` first | `tdd` |
+| A timer, meal runner or session misbehaves after reload/backgrounding; a page 404s or breaks on Pages | `diagnosing-bugs` |
+| Showing a UI change actually works in the dev server or installed PWA | `run` |
+| Changing a researched cook temp/time, a doneness rule, or anything that changes what the owner cooks | `sop-owner-decision` |
+| Before finishing any task (lint + tests + build) | `verify` (project command) |
+| Any commit; a branch ready to merge (merging to `main` deploys — get a `code-review` first) | `safe-commit` / `sop-ship-pr` |
+| Only when the user asked to deploy | `deploy` (project command) |
+| The test count or catalog counts in this file moved | `sop-project-guide` |
+
 ## Before you finish any task
 
 ```bash
