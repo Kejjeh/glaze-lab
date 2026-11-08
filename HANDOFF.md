@@ -63,8 +63,8 @@ not in iOS Safari itself.
 
 ## Open questions (for the owner)
 
-1. `CONTEXT.md` was superseded by CLAUDE.md/HANDOFF.md and reduced to a pointer.
-   Delete it entirely, or keep the pointer?
+1. Resolved 2026-11-08: the `CONTEXT.md` pointer stub (superseded by
+   CLAUDE.md/HANDOFF.md) was deleted on the owner's request.
 2. Is deploying (pushing to `main`) something agents may do routinely, or
    should every deploy be user-approved? (Assumed: user-approved.)
 3. Recovery sessions expire after 24 h (`SESSION_MAX_AGE_MS`). Is that the right
